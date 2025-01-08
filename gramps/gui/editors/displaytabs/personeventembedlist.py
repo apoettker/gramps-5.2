@@ -3,6 +3,7 @@
 #
 # Copyright (C) 2000-2006  Donald N. Allingham
 # Copyright (C) 2009       B. Malengier
+# Copyright (C) 2025       Alois Poettker
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,9 +34,10 @@ from gi.repository import GLib
 #
 # -------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
-
 _ = glocale.translation.gettext
-from gramps.gen.lib import EventRoleType, EventType
+
+from gramps.gen.db import DbTxn
+from gramps.gen.lib import EventRoleType, EventType, EventRef
 from gramps.gen.display.name import displayer as name_displayer
 from .eventembedlist import EventEmbedList
 from .eventrefmodel import EventRefModel
@@ -58,6 +60,8 @@ class PersonEventEmbedList(EventEmbedList):
         "del": _("Remove the selected personal event"),
         "edit": _("Edit the selected personal event or edit family"),
         "share": _("Share an existing event"),
+        "clone" : _("Clone an existing event"),
+        "merge" : _("Merge two existing events"),
         "up": _("Move the selected event upwards or change family order"),
         "down": _("Move the selected event downwards or change family order"),
     }
@@ -73,6 +77,7 @@ class PersonEventEmbedList(EventEmbedList):
         **kwargs
     ):
         self.dbstate = dbstate
+
         EventEmbedList.__init__(
             self, dbstate, uistate, track, obj, config_key, build_model, **kwargs
         )
@@ -81,6 +86,7 @@ class PersonEventEmbedList(EventEmbedList):
         if not self._data or self.changed:
             self._data = [self.obj.get_event_ref_list()]
             self._groups = [(self.obj.get_handle(), self._WORKNAME, "")]
+
             # own family events
             family_handle_list = self.obj.get_family_handle_list()
             if family_handle_list:
@@ -101,6 +107,7 @@ class PersonEventEmbedList(EventEmbedList):
                         groupname = self._UNKNOWNNAME
                     self._data.append(family.get_event_ref_list())
                     self._groups.append((family_handle, self._FAMNAME, groupname))
+
             # we register all events that need to be tracked
             for group in self._data:
                 self.callman.register_handles({"event": [eref.ref for eref in group]})
@@ -162,6 +169,7 @@ class PersonEventEmbedList(EventEmbedList):
         if ref[0] == 1:
             # cannot move up, already first family
             return
+
         # change family list and rebuild the tabpage
         index = ref[0] - 1
         flist = self.obj.get_family_handle_list()
@@ -169,6 +177,7 @@ class PersonEventEmbedList(EventEmbedList):
         flist.insert(index - 1, handle)
         self.changed = True
         self.rebuild()
+
         # select the row
         # New index is index-1 but for path, add another 1 for person events.
         path = (index,)
@@ -190,6 +199,7 @@ class PersonEventEmbedList(EventEmbedList):
         if ref[0] == len(self._groups) - 1:
             # cannot move down, already last family
             return
+
         # change family list and rebuild the tabpage
         index = ref[0] - 1
         flist = self.obj.get_family_handle_list()
@@ -197,8 +207,62 @@ class PersonEventEmbedList(EventEmbedList):
         flist.insert(index + 1, handle)
         self.changed = True
         self.rebuild()
+
         # select the row
         # New index is index+1 but for path, add another 1 for person events.
         path = (index + 2,)
         self.tree.get_selection().select_path(path)
         GLib.idle_add(self.tree.scroll_to_cell, path)
+
+    def merge_button_clicked(self, obj):
+        """
+        Method called with the Merge button is clicked.
+        """
+        self.action = ''   # Reset event action
+        # double check for properly work; see eventembedlist/_selection_changed
+        if len(self.selected_list) != 2:
+            return
+
+        person = self.dbstate.db.get_person_from_gramps_id(self.obj.gramps_id)
+        if person:
+            self.changed = True
+            event_ref_list = [event_ref.ref for event_ref in person.event_ref_list]
+
+            selected0_ref = self.selected_list[0][1].ref
+            selected1_ref = self.selected_list[1][1].ref
+
+            # Checks if event are not equal
+            if selected0_ref == selected1_ref:
+                from ...dialog import WarningDialog
+                WarningDialog(
+                    _("Cannot merge this references"),
+                    _("This is one event, but with different roles."),
+                    parent=self.uistate.window, )
+                return
+
+            # Checks if event is stored in DB. Note: if not, will be!
+            for selected_ref in [selected0_ref, selected1_ref]:
+                if selected_ref not in event_ref_list:
+                    event_ref = EventRef()
+                    event_ref.ref = selected_ref
+                    event_ref.role = EventRoleType.PRIMARY
+                    person.add_event_ref(event_ref)
+
+                    with DbTxn(_("Edit Person (%s)") % person.gramps_id,
+                               self.dbstate.db) as trans:
+                        self.dbstate.db.commit_person(person, trans)
+
+            self.action = 'Event-Merge'
+            from ...merge import MergeEvent
+            MergeEvent(self.dbstate, self.uistate, self.track, \
+                       selected0_ref, selected1_ref)
+        else:
+            from ...dialog import WarningDialog
+            WarningDialog(
+                _("Cannot merge this references"),
+                _("This events cannot be merged at this time. "
+                  "The person is not saved in database.\n\nTo merge this event "
+                  "references, you need to press the OK button first."),
+                parent=self.uistate.window)
+
+        return None

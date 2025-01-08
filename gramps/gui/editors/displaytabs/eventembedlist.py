@@ -66,6 +66,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         "del": _("Remove the selected family event"),
         "edit": _("Edit the selected family event or edit person"),
         "share": _("Share an existing event"),
+        "clone" : _("Clone an existing event"),
+        "merge" : _("Merge two existing events"),
         "up": _("Move the selected event upwards"),
         "down": _("Move the selected event downwards"),
     }
@@ -123,7 +125,9 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         self.obj = obj
         self._groups = []
         self._data = []
+
         DbGUIElement.__init__(self, dbstate.db)
+
         GroupEmbeddedList.__init__(
             self,
             dbstate,
@@ -133,9 +137,42 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
             build_model,
             config_key,
             share_button=True,
+            clone_button=True,
+            merge_button=True,
             move_buttons=True,
             **kwargs,
         )
+
+        # Gtk mode to allow multiple selection of list entries
+        self.selection.set_mode(Gtk.SelectionMode.MULTIPLE)
+
+    def _selection_changed(self, obj=None):
+        """
+        Callback method called after user selection of a row
+        overwrites method in buttontab.py
+        """
+        if self.dirty_selection:
+            return
+
+        # picks the actual selected rows
+        self.selected_list = []   # Selection list (eg. multiselection)
+        (model, pathlist) = self.selection.get_selected_rows()
+        for path in pathlist:
+            iter_ = model.get_iter(path)   # group number in person/family editor
+            if iter_ is not None:
+                value = model.get_value(iter_, self._HANDLE_COL)   # (Index, EventRef)
+                self.selected_list.append(value)   # EventRef handle
+
+        # manage the sensitivity of several buttons to avoid warning messages
+        if self.selected_list:
+            btn = len(self.selected_list) == 1
+            self.edit_btn.set_sensitive(btn)
+            self.clone_btn.set_sensitive(btn)
+            self.del_btn.set_sensitive(btn)
+
+            merge_list = [item for item in self.selected_list if item[0] == 0]
+            btn = len(merge_list) == 2
+            self.merge_btn.set_sensitive(btn)
 
     def _connect_db_signals(self):
         """
@@ -197,7 +234,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         if not self._data or self.changed:
             self._data = [self.obj.get_event_ref_list()]
             self._groups = [(self.obj.get_handle(), self._WORKNAME, "")]
-            # father events
+
+            # Father events
             fhandle = self.obj.get_father_handle()
             if fhandle:
                 fdata = self.dbstate.db.get_person_from_handle(
@@ -206,7 +244,8 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
                 if fdata:
                     self._groups.append((fhandle, self._FATHNAME, ""))
                     self._data.append(fdata)
-            # mother events
+
+            # Mother events
             mhandle = self.obj.get_mother_handle()
             if mhandle:
                 mdata = self.dbstate.db.get_person_from_handle(
@@ -215,6 +254,7 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
                 if mdata:
                     self._groups.append((mhandle, self._MOTHNAME, ""))
                     self._data.append(mdata)
+
             # we register all events that need to be tracked
             for group in self._data:
                 self.callman.register_handles({"event": [eref.ref for eref in group]})
@@ -326,6 +366,7 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
         ref = self.get_selected()
         if ref and ref[1] is not None and ref[0] == self._WORKGROUP:
             event = self.dbstate.db.get_event_from_handle(ref[1].ref)
+
             try:
                 self.get_ref_editor()(
                     self.dbstate,
@@ -347,6 +388,26 @@ class EventEmbedList(DbGUIElement, GroupEmbeddedList):
             # bring up family editor
             key = self._groups[ref[0]][0]
             self.editnotworkgroup(key)
+
+    def clone_button_clicked(self, obj):
+        'Function called with the Clone button is clicked.'
+
+        source_ref = self.get_selected()
+        if source_ref and source_ref[1] is not None and source_ref[0] == self._WORKGROUP:
+            self.changed = True
+            source_event = self.dbstate.db.get_event_from_handle(source_ref[1].ref)
+
+            try:
+                event = Event(source=source_event)
+                event.set_gramps_id(self.dbstate.db.find_next_event_gramps_id())
+                event.set_handle(None)
+
+                ref = EventRef(source=source_ref[1])
+
+                self.get_ref_editor()(self.dbstate, self.uistate, self.track,
+                    event, ref, self.object_added)
+            except WindowActiveError:
+                pass
 
     def object_added(self, reference, primary):
         reference.ref = primary.handle

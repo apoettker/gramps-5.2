@@ -70,6 +70,8 @@ class GroupEmbeddedList(EmbeddedList):
         build_model,
         config_key,
         share_button=False,
+        clone_button=False,
+        merge_button=False,
         move_buttons=False,
         jump_button=False,
         **kwargs,
@@ -87,6 +89,8 @@ class GroupEmbeddedList(EmbeddedList):
             build_model,
             config_key,
             share_button,
+            clone_button,
+            merge_button,
             move_buttons,
             jump_button,
         )
@@ -328,6 +332,7 @@ class GroupEmbeddedList(EmbeddedList):
             dlist.insert(row_from[1] - 1, obj)
             self.changed = True
             self.rebuild()
+
             # select the row
             path = (self._WORKGROUP, row_from[1] - 1)
             self.tree.get_selection().select_path(path)
@@ -361,6 +366,7 @@ class GroupEmbeddedList(EmbeddedList):
             dlist.insert(row_from[1] + 1, obj)
             self.changed = True
             self.rebuild()
+
             # select the row
             path = (self._WORKGROUP, row_from[1] + 1)
             self.tree.get_selection().select_path(path)

@@ -87,6 +87,8 @@ class EmbeddedList(ButtonTab):
         build_model,
         config_key,
         share_button=False,
+        clone_button=False,
+        merge_button=False,
         move_buttons=False,
         jump_button=False,
         top_label=None,
@@ -103,6 +105,8 @@ class EmbeddedList(ButtonTab):
             track,
             name,
             share_button,
+            clone_button,
+            merge_button,
             move_buttons,
             jump_button,
             top_label,
@@ -166,19 +170,16 @@ class EmbeddedList(ButtonTab):
         An entry is
             ( needs_write_access, title, function)
         """
+        itemlist = [(True, _('_Add'), self.add_button_clicked)]
         if self.share_btn:
-            itemlist = [
-                (True, _("_Add"), self.add_button_clicked),
-                (True, _("Share"), self.share_button_clicked),
-                (False, _("_Edit"), self.edit_button_clicked),
-                (True, _("_Remove"), self.del_button_clicked),
-            ]
-        else:
-            itemlist = [
-                (True, _("_Add"), self.add_button_clicked),
-                (False, _("_Edit"), self.edit_button_clicked),
-                (True, _("_Remove"), self.del_button_clicked),
-            ]
+            itemlist.append((True,  _('Share'), self.share_button_clicked))
+        itemlist.append((False, _('_Edit'), self.edit_button_clicked))
+        if self.clone_btn:
+            itemlist.append((False, _('_Clone'), self.clone_button_clicked))
+        if self.merge_btn:
+            itemlist.append((False, _('_Merge'), self.merge_button_clicked))
+        itemlist.append((True, _('_Remove'), self.del_button_clicked))
+
         return itemlist
 
     def get_middle_click(self):
@@ -435,9 +436,16 @@ class EmbeddedList(ButtonTab):
         to indicate what the returned value should be. If no selection
         has been made, None is returned.
         """
-        (model, node) = self.selection.get_selected()
+        if self.selection.get_mode() == Gtk.SelectionMode.MULTIPLE:
+            (model, pathlist) = self.selection.get_selected_rows()
+            path = pathlist[0] if len(pathlist) > 0 else None
+            node = model.get_iter(path) if path else None
+        else:
+            (model, node) = self.selection.get_selected()
+
         if node:
             return model.get_value(node, self._HANDLE_COL)
+
         return None
 
     def is_empty(self):
@@ -597,6 +605,7 @@ class EmbeddedList(ButtonTab):
         # during rebuild, don't do _selection_changed
         self.dirty_selection = True
         (model, node) = self.selection.get_selected()
+
         selectedpath = None
         if node:
             selectedpath = model.get_path(node)

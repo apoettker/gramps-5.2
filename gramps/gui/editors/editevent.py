@@ -1,9 +1,11 @@
 #
+
 # Gramps - a GTK+/GNOME based genealogy program
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2009       Gary Burton
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2025       Alois Poettker
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -82,6 +84,8 @@ WIKI_HELP_SEC = _("New_Event_dialog", "manual")
 # -------------------------------------------------------------------------
 class EditEvent(EditPrimary):
     def __init__(self, dbstate, uistate, track, event, callback=None):
+        self.action = uistate.action.split('-')[1]
+
         EditPrimary.__init__(
             self,
             dbstate,
@@ -95,6 +99,8 @@ class EditEvent(EditPrimary):
 
         self._init_event()
 
+        self.callback = callback
+
     def _init_event(self):
         if not self.db.readonly:
             self.commit_event = self.db.commit_event
@@ -103,18 +109,20 @@ class EditEvent(EditPrimary):
         return Event()
 
     def get_menu_title(self):
+        """ compile menu title out of different actions """
         handle = self.obj.get_handle()
+
+        event_name = ''
         if handle:
+            event_name = self.obj.get_type().string
             who = get_participant_from_event(self.db, handle)
             desc = self.obj.get_description()
-            event_name = self.obj.get_type()
-            if desc:
-                event_name = "%s - %s" % (event_name, desc)
             if who:
-                event_name = "%s - %s" % (event_name, who)
-            dialog_title = _("Event: %s") % event_name
-        else:
-            dialog_title = _("New Event")
+                event_name = ': %s - %s' % (event_name, who)
+            elif desc:
+                event_name = ': %s - %s' % (event_name, desc)
+
+        dialog_title = _("%s Event%s") % (_(self.action), event_name)
         return dialog_title
 
     def get_custom_events(self):
@@ -142,7 +150,7 @@ class EditEvent(EditPrimary):
         Connect any signals that need to be connected.
         Called by the init routine of the base class (_EditPrimary).
         """
-        self._add_db_signal("event-rebuild", self._do_close)
+        # self._add_db_signal("event-rebuild", self._do_close)
         self._add_db_signal("event-delete", self.check_for_close)
         self._add_db_signal("place-delete", self.place_delete)
         self._add_db_signal("place-update", self.place_update)
@@ -313,11 +321,23 @@ class EditEvent(EditPrimary):
             ErrorDialog(
                 _("Cannot save event"),
                 _("The event type cannot be empty"),
-                parent=self.window,
-            )
+                parent=self.window)
             self.ok_button.set_sensitive(True)
             return
 
+        if self.action in ['Add', 'Clone']:   # Add / Clone event
+            with DbTxn(_("%s Event (%s)") % (self.action, self.obj.get_gramps_id()),
+                       self.db) as trans:
+                self.db.add_event(self.obj, trans)
+        elif self.action == 'MultiEdit':   # Multiedit event
+            self.save_multiple()
+        elif self.data_has_changed():   # Edit / Merge event
+            with DbTxn(_("%s Event (%s)") % (self.action, self.obj.get_gramps_id()),
+                       self.db) as trans:
+                if self.action == 'Merge':   #  Merge event
+                    self.obj.set_gramps_id(self.db.find_next_event_gramps_id())
+                self.db.commit_event(self.obj, trans)
+        """
         if not self.obj.handle:
             with DbTxn(
                 _("Add Event (%s)") % self.obj.get_gramps_id(), self.db
@@ -331,10 +351,73 @@ class EditEvent(EditPrimary):
                     if not self.obj.get_gramps_id():
                         self.obj.set_gramps_id(self.db.find_next_event_gramps_id())
                     self.db.commit_event(self.obj, trans)
-
-        self._do_close()
+        """
         if self.callback:
             self.callback(self.obj)
+        self._do_close()
+
+    def save_multiple(self):
+        """
+        self.obj is a combined event from all selected events with e.g. some 'multiple' items inside"""
+        obj_type = self.obj.get_type()
+        obj_date = self.obj.get_date_object()
+        obj_place = self.obj.get_place_handle()
+        obj_desc = self.obj.get_description()
+
+        obj_citation_new = True
+        obj_citation_handlelist = self.obj.get_citation_list()
+        if len(obj_citation_handlelist) == 1:
+            obj_citation_new = self.db.get_citation_from_handle(obj_citation_handlelist[0]).page != 'Multiple'
+        obj_note_new = True
+        obj_note_handlelist = self.obj.get_note_list()
+        if len(obj_note_handlelist) == 1:
+            obj_note_new = self.db.get_note_from_handle(obj_note_handlelist[0]).text != 'Multiple'
+        obj_media_new = True
+        obj_media_handlelist = self.obj.get_media_list()
+        if len(obj_media_handlelist) == 1:
+            obj_media_new = self.db.get_media_from_handle(obj_media_handlelist[0]).desc != 'Multiple'
+
+        self.uistate.set_busy_cursor(True)
+        with DbTxn(_("Edit Multi-Event"), self.db, batch=True) as trans:
+            for handle in self.obj.multiple["events"]:
+                slct_change = False
+                slct_event = self.db.get_event_from_handle(handle)
+
+                dflt_type = self.obj.multiple["type"]
+                if dflt_type != str(obj_type):
+                    slct_event.type = self.obj.type
+                    slct_change = True
+                dflt_date = self.obj.multiple["date"]
+                if not dflt_date.is_equal(obj_date):
+                    slct_event.date = self.obj.date
+                    slct_change = True
+                dflt_place = self.obj.multiple["place"]
+                if dflt_place != obj_place:
+                    slct_event.place = self.obj.place
+                    slct_change = True
+                dflt_desc = self.obj.multiple["desc"]
+                if dflt_desc != obj_desc:
+                    slct_event.set_description(obj_desc)
+                    slct_change = True
+
+                dflt_citation = self.obj.multiple["citation"]
+                if obj_citation_new and obj_citation_handlelist != dflt_citation:
+                    slct_event.citation_list.extend(obj_citation_handlelist)
+                    slct_change = True
+                dflt_note = self.obj.multiple["note"]
+                if obj_note_new and obj_note_handlelist != dflt_note:
+                    slct_event.note_list.extend(obj_note_handlelist)
+                    slct_change = True
+                dflt_media = self.obj.multiple["media"]
+                if obj_media_new and obj_media_handlelist != dflt_media:
+                    slct_event.media_list.extend(obj_media_handlelist)
+                    slct_change = True
+
+                if slct_change:
+                    self.commit_event(slct_event, trans)
+
+        self.db.request_rebuild()
+        self.uistate.set_busy_cursor(False)
 
     def data_has_changed(self):
         """

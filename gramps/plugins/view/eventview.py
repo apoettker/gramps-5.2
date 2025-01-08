@@ -3,7 +3,7 @@
 # Copyright (C) 2001-2007  Donald N. Allingham
 # Copyright (C) 2008       Gary Burton
 # Copyright (C) 2011       Tim G L Lyons
-# Copyright (C) 2017       Alois Poettker
+# Copyright (C) 2025       Alois Poettker
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,17 +42,19 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 
 _ = glocale.translation.sgettext
 
-from gramps.gui.dialog import ErrorDialog
 from gramps.gen.errors import WindowActiveError
 from gramps.gen.lib import Event
+from gramps.gen.plug import CATEGORY_QR_EVENT
 
+from gramps.gui.dialog import ErrorDialog
 from gramps.gui.ddtargets import DdTargets
-from gramps.gui.editors import EditEvent
+from gramps.gui.editors import EditEvent, EditMultiEvent
 from gramps.gui.filters.sidebar import EventSidebarFilter
 from gramps.gui.merge import MergeEvent
-from gramps.gen.plug import CATEGORY_QR_EVENT
+from gramps.gui.uimanager import ActionGroup
+
 from gramps.gui.views.bookmarks import EventBookmarks
-from gramps.gui.views.listview import ListView, TEXT, MARKUP, ICON
+from gramps.gui.views.listview import ListView,  NavigationView, TEXT, MARKUP, ICON
 from gramps.gui.views.treemodels import EventModel
 
 
@@ -114,6 +116,7 @@ class EventView(ListView):
     EDIT_MSG = _("Edit the selected event")
     DEL_MSG = _("Delete the selected event")
     MERGE_MSG = _("Merge the selected events")
+    CLONE_MSG   = _("Clones the selected event")
     FILTER_TYPE = "Event"
     QR_CATEGORY = CATEGORY_QR_EVENT
 
@@ -148,7 +151,8 @@ class EventView(ListView):
             multiple=True,
             filter_class=EventSidebarFilter,
         )
-
+        # Identify the requested action in several sublevel
+        uistate.action = ""
         uistate.connect("nameformat-changed", self.build_tree)
         uistate.connect("placeformat-changed", self.build_tree)
 
@@ -196,60 +200,64 @@ class EventView(ListView):
 
     additional_ui = [  # Defines the UI string for UIManager
         """
-      <placeholder id="LocalExport">
-        <item>
-          <attribute name="action">win.ExportTab</attribute>
-          <attribute name="label" translatable="yes">Export View...</attribute>
-        </item>
-      </placeholder>
-""",
+        <placeholder id="LocalExport">
+          <item>
+            <attribute name="action">win.ExportTab</attribute>
+            <attribute name="label" translatable="yes">Export View...</attribute>
+          </item>
+        </placeholder>
+        """,
         """
-      <section id="AddEditBook">
-        <item>
-          <attribute name="action">win.AddBook</attribute>
-          <attribute name="label" translatable="yes">_Add Bookmark</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.EditBook</attribute>
-          <attribute name="label" translatable="no">%s...</attribute>
-        </item>
-      </section>
-"""
+        <section id="AddEditBook">
+          <item>
+            <attribute name="action">win.AddBook</attribute>
+            <attribute name="label" translatable="yes">_Add Bookmark</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.EditBook</attribute>
+            <attribute name="label" translatable="no">%s...</attribute>
+          </item>
+        </section>
+        """
         % _("Organize Bookmarks"),
         """
-      <placeholder id="CommonGo">
-      <section>
-        <item>
-          <attribute name="action">win.Back</attribute>
-          <attribute name="label" translatable="yes">_Back</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Forward</attribute>
-          <attribute name="label" translatable="yes">_Forward</attribute>
-        </item>
-      </section>
-      </placeholder>
-""",
+        <placeholder id="CommonGo">
+        <section>
+          <item>
+            <attribute name="action">win.Back</attribute>
+            <attribute name="label" translatable="yes">_Back</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Forward</attribute>
+            <attribute name="label" translatable="yes">_Forward</attribute>
+          </item>
+        </section>
+        </placeholder>
+        """,
         """
-      <section id='CommonEdit' groups='RW'>
-        <item>
-          <attribute name="action">win.Add</attribute>
-          <attribute name="label" translatable="yes">_Add...</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Edit</attribute>
-          <attribute name="label">%s</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Remove</attribute>
-          <attribute name="label" translatable="yes">_Delete</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Merge</attribute>
-          <attribute name="label" translatable="yes">_Merge...</attribute>
-        </item>
-      </section>
-"""
+        <section id='CommonEdit' groups='RW'>
+          <item>
+            <attribute name="action">win.Add</attribute>
+            <attribute name="label" translatable="yes">_Add...</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Edit</attribute>
+            <attribute name="label">%s</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Remove</attribute>
+            <attribute name="label" translatable="yes">_Delete</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Clone</attribute>
+            <attribute name="label" translatable="yes">_Clone...</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Merge</attribute>
+            <attribute name="label" translatable="yes">_Merge...</attribute>
+          </item>
+        </section>
+        """
         % _("_Edit...", "action"),  # to use sgettext()
         """
         <placeholder id='otheredit'>
@@ -259,130 +267,153 @@ class EventView(ListView):
         """Event Filter Editor</attribute>
         </item>
         </placeholder>
-""",  # Following are the Toolbar items
+        """,  # Following are the Toolbar items
         """
-    <placeholder id='CommonNavigation'>
-    <child groups='RO'>
-      <object class="GtkToolButton">
-        <property name="icon-name">go-previous</property>
-        <property name="action-name">win.Back</property>
-        <property name="tooltip_text" translatable="yes">"""
-        """Go to the previous object in the history</property>
-        <property name="label" translatable="yes">_Back</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RO'>
-      <object class="GtkToolButton">
-        <property name="icon-name">go-next</property>
-        <property name="action-name">win.Forward</property>
-        <property name="tooltip_text" translatable="yes">"""
-        """Go to the next object in the history</property>
-        <property name="label" translatable="yes">_Forward</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    </placeholder>
-""",
-        """
-    <placeholder id='BarCommonEdit'>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">list-add</property>
-        <property name="action-name">win.Add</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">_Add...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">gtk-edit</property>
-        <property name="action-name">win.Edit</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">Edit...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">list-remove</property>
-        <property name="action-name">win.Remove</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">_Delete</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">gramps-merge</property>
-        <property name="action-name">win.Merge</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">_Merge...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-   </placeholder>
-"""
-        % (ADD_MSG, EDIT_MSG, DEL_MSG, MERGE_MSG),
-        """
-    <menu id="Popup">
-      <section>
-        <item>
-          <attribute name="action">win.Back</attribute>
-          <attribute name="label" translatable="yes">_Back</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Forward</attribute>
-          <attribute name="label" translatable="yes">Forward</attribute>
-        </item>
-      </section>
-      <section id="PopUpTree">
-      </section>
-      <section>
-        <item>
-          <attribute name="action">win.Add</attribute>
-          <attribute name="label" translatable="yes">_Add...</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Edit</attribute>
-          <attribute name="label">%s</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Remove</attribute>
-          <attribute name="label" translatable="yes">_Delete</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Merge</attribute>
-          <attribute name="label" translatable="yes">_Merge...</attribute>
-        </item>
-      </section>
-      <section>
-        <placeholder id='QuickReport'>
+        <placeholder id='CommonNavigation'>
+        <child groups='RO'>
+          <object class="GtkToolButton">
+            <property name="icon-name">go-previous</property>
+            <property name="action-name">win.Back</property>
+            <property name="tooltip_text" translatable="yes">"""
+            """Go to the previous object in the history</property>
+            <property name="label" translatable="yes">_Back</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RO'>
+          <object class="GtkToolButton">
+            <property name="icon-name">go-next</property>
+            <property name="action-name">win.Forward</property>
+            <property name="tooltip_text" translatable="yes">"""
+            """Go to the next object in the history</property>
+            <property name="label" translatable="yes">_Forward</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
         </placeholder>
-      </section>
-    </menu>
-"""
+        """,
+        """
+        <placeholder id='BarCommonEdit'>
+        <child groups='RW'>
+          <object class="GtkToolButton">
+            <property name="icon-name">list-add</property>
+            <property name="action-name">win.Add</property>
+            <property name="tooltip_text">%s</property>
+            <property name="label" translatable="yes">_Add...</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RW'>
+          <object class="GtkToolButton">
+            <property name="icon-name">gtk-edit</property>
+            <property name="action-name">win.Edit</property>
+            <property name="tooltip_text">%s</property>
+            <property name="label" translatable="yes">Edit...</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RW'>
+          <object class="GtkToolButton">
+            <property name="icon-name">list-remove</property>
+            <property name="action-name">win.Remove</property>
+            <property name="tooltip_text">%s</property>
+            <property name="label" translatable="yes">_Delete</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RW'>
+          <object class="GtkToolButton">
+            <property name="icon-name">gramps-clone</property>
+            <property name="action-name">win.Clone</property>
+            <property name="tooltip_text">%s</property>
+            <property name="label" translatable="yes">_Clone...</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RW'>
+          <object class="GtkToolButton">
+            <property name="icon-name">gramps-merge</property>
+            <property name="action-name">win.Merge</property>
+            <property name="tooltip_text">%s</property>
+            <property name="label" translatable="yes">_Merge...</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+       </placeholder>
+       """
+        % (ADD_MSG, EDIT_MSG, DEL_MSG, CLONE_MSG, MERGE_MSG),
+        """
+        <menu id="Popup">
+          <section>
+            <item>
+              <attribute name="action">win.Back</attribute>
+              <attribute name="label" translatable="yes">_Back</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Forward</attribute>
+              <attribute name="label" translatable="yes">Forward</attribute>
+            </item>
+          </section>
+          <section id="PopUpTree">
+          </section>
+          <section>
+            <item>
+              <attribute name="action">win.Add</attribute>
+              <attribute name="label" translatable="yes">_Add...</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Edit</attribute>
+              <attribute name="label">%s</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Remove</attribute>
+              <attribute name="label" translatable="yes">_Delete</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Clone</attribute>
+              <attribute name="label" translatable="yes">_Clone...</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Merge</attribute>
+              <attribute name="label" translatable="yes">_Merge...</attribute>
+            </item>
+          </section>
+          <section>
+            <placeholder id='QuickReport'>
+            </placeholder>
+          </section>
+        </menu>
+        """
         % _("_Edit...", "action"),  # to use sgettext()
     ]
+
+    def define_actions(self):
+        """
+        overwrite ListView.define_actions and add clone action
+        """
+        ListView.define_actions(self)
+        self.edit_action.add_actions([("Clone", self.clone)])
 
     def get_handle_from_gramps_id(self, gid):
         obj = self.dbstate.db.get_event_from_gramps_id(gid)
@@ -392,6 +423,7 @@ class EventView(ListView):
             return None
 
     def add(self, *obj):
+        self.uistate.action = "Event-Add"
         try:
             EditEvent(self.dbstate, self.uistate, [], Event())
         except WindowActiveError:
@@ -401,6 +433,7 @@ class EventView(ListView):
         """
         Method called when deleting event(s) from the event view.
         """
+        self.uistate.action = "Event-Remove"
         handles = self.selected_handles()
         ht_list = [("Event", hndl) for hndl in handles]
         self.remove_selected_objects(ht_list)
@@ -414,9 +447,45 @@ class EventView(ListView):
         )
 
     def edit(self, *obj):
+        """
+        Edit the selected events.
+        """
+        self.uistate.action = "Event-Edit"
+        handles = self.selected_handles()
+        event = self.dbstate.db.get_event_from_handle(handles[0])
+        callback = None
+
+        if len(handles) > 1:   # Multiple events selected
+            self.uistate.action = "Event-MultiEdit"
+            multievent = EditMultiEvent(self.dbstate)
+            event = multievent.get_events_from_handles(handles)
+            callback = multievent.clean_objects_from_multiple
+        """
         for handle in self.selected_handles():
             event = self.dbstate.db.get_event_from_handle(handle)
+        """
+        try:
+            EditEvent(self.dbstate, self.uistate, [], event, callback)
+        except WindowActiveError:
+            pass
+
+    def clone(self, *obj):
+        """
+        Clones the selected event.
+        """
+        event_list = self.selected_handles()
+
+        if len(event_list) != 1:
+            msg = _("Cannot clone event object.")
+            msg2 = _("Exactly one event must be selected to perform a clone.")
+            ErrorDialog(msg, msg2, parent=self.uistate.window)
+        else:
+            source_event = self.dbstate.db.get_event_from_handle(event_list[0])
+            event = Event(source=source_event)
+            event.handle, event.gramps_id = None, None
+
             try:
+                self.uistate.action = 'Event-Clone'
                 EditEvent(self.dbstate, self.uistate, [], event)
             except WindowActiveError:
                 pass
@@ -436,6 +505,7 @@ class EventView(ListView):
             )
             ErrorDialog(msg, msg2, parent=self.uistate.window)
         else:
+            self.uistate.action = "Event-Merge"
             MergeEvent(self.dbstate, self.uistate, [], mlist[0], mlist[1])
 
     def tag_updated(self, handle_list):

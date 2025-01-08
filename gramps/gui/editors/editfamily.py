@@ -70,9 +70,9 @@ from .editchildref import EditChildRef
 from .editperson import EditPerson
 from .displaytabs import (
     EmbeddedList,
-    EventEmbedList,
     CitationEmbedList,
     FamilyAttrEmbedList,
+    FamilyEventEmbedList,
     NoteTab,
     GalleryTab,
     FamilyLdsEmbedList,
@@ -827,7 +827,7 @@ class EditFamily(EditPrimary):
         self.track_ref_for_deletion("child_list")
         self.track_ref_for_deletion("child_tab")
 
-        self.event_list = EventEmbedList(
+        self.event_list = FamilyEventEmbedList(
             self.dbstate,
             self.uistate,
             self.track,
