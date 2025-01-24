@@ -1553,3 +1553,35 @@ register(
     navtypes=["Family"],
     help_url=GRAMPLET_HELP,
 )
+
+register(
+    GRAMPLET,
+    id="Person Empty Numbers",
+    name=_("Leerstellen"),
+    description=_("Gramplet showing empty numbers in object lists"),
+    version="1.0.0",
+    gramps_target_version=MODULE_VERSION,
+    status=STABLE,
+    fname="emptynumbersgramplet.py",
+    height=200,
+    gramplet="PersonEmptyNumbers",
+    gramplet_title=_("Leerstellen"),
+    navtypes=["Person"],
+    help_url=GRAMPLET_HELP,
+)
+
+register(
+    GRAMPLET,
+    id="Family Empty Numbers",
+    name=_("Leerstellen"),
+    description=_("Gramplet showing empty numbers in object lists"),
+    version="1.0.0",
+    gramps_target_version=MODULE_VERSION,
+    status=STABLE,
+    fname="emptynumbersgramplet.py",
+    height=200,
+    gramplet="FamilyEmptyNumbers",
+    gramplet_title=_("Leerstellen"),
+    navtypes=["Family"],
+    help_url=GRAMPLET_HELP,
+)

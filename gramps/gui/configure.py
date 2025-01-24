@@ -73,6 +73,7 @@ from .editors.editplaceformat import EditPlaceFormat
 from .display import display_help
 from gramps.gen.plug.utils import available_updates
 from .plug import PluginWindows
+from gramps.plugins.tool.reorderids import ReorderEntry
 
 # from gramps.gen.errors import WindowActiveError
 from .spell import HAVE_GSPELL
@@ -345,18 +346,36 @@ class ConfigureDialog(ManagedWindow):
         """
         self.__config.set(constant, int(obj.get_value()))
 
-    def add_checkbox(
-        self,
-        grid,
-        label,
-        index,
-        constant,
-        start=1,
-        stop=9,
-        config=None,
-        extra_callback=None,
-        tooltip="",
-    ):
+
+    def add_entrybox(self, grid, label, index, constant, start=1, stop=9,
+                config=None, extra_callback=None, tooltip=""):
+        # self, grid, label, index, constant,
+        # callback=None, config=None, col_attach=1, helptext=""):
+        """
+        Adds entry field box strings.
+        """
+        if not config:
+            config = self.__config
+        if label:
+            lwidget = BasicLabel(_("%s: ") % label)  # needed for French
+        entry = Gtk.Entry()
+        entry.set_text(constant)
+        entry.set_hexpand(True)
+        if extra_callback:
+            entry.connect("activate", extra_callback)
+            entry.connect("focus-out-event", extra_callback)
+        if tooltip:
+            entry.set_tooltip_text(tooltip)
+        if label:
+            grid.attach(lwidget, start, index, stop - start, 1)
+            grid.attach(entry, start +1, index, stop - (start +1), 1)
+        else:
+            grid.attach(entry, start, index, stop - start, 1)
+
+        return entry
+
+    def add_checkbox(self, grid, label, index, constant, start=1, stop=9,
+                     config=None, extra_callback=None, tooltip=""):
         """
         Adds checkbox option with tooltip.
         """
@@ -372,7 +391,8 @@ class ConfigureDialog(ManagedWindow):
         grid.attach(checkbox, start, index, stop - start, 1)
         return checkbox
 
-    def add_radiobox(self, grid, label, index, constant, group, column, config=None):
+    def add_radiobox(self, grid, label, index, constant, group, start=1, stop=9,
+                     config=None):
         """
         Adds radiobox option.
         """
@@ -380,9 +400,10 @@ class ConfigureDialog(ManagedWindow):
             config = self.__config
         radiobox = Gtk.RadioButton.new_with_mnemonic_from_widget(group, label)
         if config.get(constant):
-            radiobox.set_active(True)
+            # radiobox.set_active(True)
+            pass
         radiobox.connect("toggled", self.update_radiobox, constant)
-        grid.attach(radiobox, column, index, 1, 1)
+        grid.attach(radiobox, start, index, stop - start, 1)
         return radiobox
 
     def add_text(
@@ -484,6 +505,7 @@ class ConfigureDialog(ManagedWindow):
             grid.attach(entry, col_attach + 1, index, 1, 1)
         else:
             grid.attach(entry, col_attach, index, 1, 1)
+
         return entry
 
     def add_pos_int_entry(
@@ -502,15 +524,19 @@ class ConfigureDialog(ManagedWindow):
         """
         if not config:
             config = self.__config
-        lwidget = BasicLabel(_("%s: ") % label)  # needed for French
+        if label:
+            lwidget = BasicLabel(_("%s: ") % label)  # needed for French
         entry = Gtk.Entry()
         entry.set_text(str(config.get(constant)))
         entry.set_tooltip_markup(helptext)
         entry.set_hexpand(True)
         if callback:
             entry.connect("changed", callback, constant)
-        grid.attach(lwidget, col_attach, index, 1, 1)
-        grid.attach(entry, col_attach + 1, index, 1, 1)
+        if label:
+            grid.attach(lwidget, col_attach, index, 1, 1)
+            grid.attach(entry, col_attach + 1, index, 1, 1)
+        else:
+            grid.attach(entry, col_attach, index, 1, 1)
 
     def add_color(self, grid, label, index, constant, config=None, col=0):
         """
@@ -542,6 +568,7 @@ class ConfigureDialog(ManagedWindow):
         index,
         constant,
         opts,
+        span=1,
         callback=None,
         config=None,
         valueactive=False,
@@ -563,6 +590,7 @@ class ConfigureDialog(ManagedWindow):
         for item in opts:
             store.append(item)
         combo = Gtk.ComboBox(model=store)
+        combo.set_column_span_column(span)
         cell = Gtk.CellRendererText()
         combo.pack_start(cell, True)
         combo.add_attribute(cell, "text", 1)
@@ -582,7 +610,7 @@ class ConfigureDialog(ManagedWindow):
         combo.connect("changed", callback, constant)
         combo.set_hexpand(True)
         grid.attach(lwidget, 1, index, 1, 1)
-        grid.attach(combo, 2, index, 1, 1)
+        grid.attach(combo, 2, index, span, 1)
         return combo
 
     def add_slider(
@@ -647,7 +675,22 @@ class ConfigureDialog(ManagedWindow):
 #
 # -------------------------------------------------------------------------
 class GrampsPreferences(ConfigureDialog):
+    xobjects = {
+        'i': ['p', 'person', 'people'],
+        'f': ['f', 'family', 'families'],
+        'e': ['e', 'event', 'events'],
+        'p': ['l', 'place', 'places'],
+        's': ['s', 'source', 'sources'],
+        'c': ['c', 'citation', 'citations'],
+        'r': ['r', 'repository', 'repositories'],
+        'o': ['o', 'media', 'media'],
+        'n': ['n', 'note', 'notes']
+    }
+
     def __init__(self, uistate, dbstate):
+        """
+        replaced by MyPrfes __init__ in ..../plugin/themes.py
+        """
         page_funcs = (
             self.add_data_panel,
             self.add_general_panel,
@@ -675,6 +718,25 @@ class GrampsPreferences(ConfigureDialog):
             "clicked", lambda x: display_help(WIKI_HELP_PAGE, WIKI_HELP_SEC)
         )
         self.setup_configs("interface.grampspreferences", 700, 450)
+
+    def _local_init(self, dbstate):
+        """"""
+        self.db = dbstate.db
+
+        self.obj_values, self.obj_methods = {}, {}  # enable access to all internal values
+        for xobj in self.xobjects.items():
+            get_quant_obj = "get_number_of_%s" % xobj[1][2]
+            prefix_fmt = "%s_prefix" % xobj[1][1]
+            next_from_id = "find_next_%s_gramps_id" % xobj[1][1]
+
+            object_fmt, quant_id, next_id = \
+                getattr(self.db, prefix_fmt), getattr(self.db, get_quant_obj)(), getattr(self.db, next_from_id)()
+            obj_value = ReorderEntry(object_fmt, quant_id, next_id, xobj[1][1])
+            obj_value.actual_id = obj_value.number_id
+            obj_value.calc_id(obj_value.object_fmt, obj_value.quant_id)
+            self.obj_values[xobj[0]] = obj_value
+
+        return True
 
     def create_grid(self):
         """
@@ -763,92 +825,38 @@ class GrampsPreferences(ConfigureDialog):
         scroll_window.add(grid)
 
         label = self.add_text(
-            grid, _("ID Formats"), 0, line_wrap=True, bold=True, start=0, stop=7
+            grid, _("ID Formats"), 0, line_wrap=False, bold=True, start=0, stop=3
+        )
+        label = self.add_text(
+            grid, _("Amount"), 0, line_wrap=False, bold=True, start=3, stop=4
+        )
+        label = self.add_text(
+            grid, _("Actual ID"), 0, line_wrap=False, bold=True, start=4, stop=5
         )
         label.set_margin_top(10)
 
-        row = 1
-        self.add_entry(
-            grid,
-            _("Person"),
-            row,
-            "preferences.iprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Family"),
-            row,
-            "preferences.fprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Place"),
-            row,
-            "preferences.pprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Source"),
-            row,
-            "preferences.sprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Citation"),
-            row,
-            "preferences.cprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Media Object"),
-            row,
-            "preferences.oprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Event"),
-            row,
-            "preferences.eprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Repository"),
-            row,
-            "preferences.rprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
-        self.add_entry(
-            grid,
-            _("Note"),
-            row,
-            "preferences.nprefix",
-            self.update_idformat_entry,
-            col_attach=1,
-        )
-        row += 1
+        for row, xobj in enumerate(self.xobjects.items()):
+            self.add_entry(
+                grid, _(xobj[0].capitalize()), row +1,
+                'preferences.%sprefix' % xobj[0],
+                self.update_idformat_entry,
+                col_attach=1,
+            )
+            box = self.add_entrybox(
+                grid, None, row +1,
+                str(self.obj_values[xobj[0]].quant_id),
+                start=3, stop=4
+            )
+            box.set_property("editable", False)
+            box = self.add_entrybox(
+                grid, None, row +1,
+                self.obj_values[xobj[0]].actgramps_id,
+                start=4, stop=5,
+                extra_callback=self.update_start_entry
+            )
+            self.obj_methods[xobj[0]] = {'widget': box}
+
+        row += 2
         label = self.add_text(
             grid,
             _(
@@ -2583,6 +2591,21 @@ class GrampsPreferences(ConfigureDialog):
             config.get("preferences.rprefix"),
             config.get("preferences.nprefix"),
         )
+
+        prim = ''.join([key for key in self.xobjects if key == constant[12]])
+        self.obj_values[prim].calc_id(obj.get_text(), self.obj_values[prim].quant_id)
+        self.obj_methods[prim]['widget'].set_text(self.obj_values[prim].actgramps_id)
+
+    def update_start_entry(self, widget, focus=None):
+        """"""
+        # reset the db next_id index with the actual IDs
+        prim = ''.join([key for key, value in self.obj_methods.items() if value['widget'] == widget])
+
+        self.obj_values[prim].set_id(widget.get_text())
+        value = self.obj_values[prim].actual_id
+        setattr(self.db, self.xobjects[prim][0] + "map_index", value)
+
+        return True
 
     def update_gendepth(self, obj, constant):
         """
