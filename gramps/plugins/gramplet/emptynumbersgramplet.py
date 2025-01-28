@@ -63,7 +63,7 @@ class EmptyNumberList(object):
         self.obj_filter = 1
         self.obj_list = []
         self.obj_dict = {
-            1: [], 2: [], 3: [], 10: [],
+            1: [], 2: [], 3: [], 5: [], 10: [], 50: [],
             'dummy': [], 'odd': [], 'even': [], 'oo': []
         }
 
@@ -150,6 +150,7 @@ class PersonEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
                      _("ungerade Leerst."),
                      _("2 Leerst."),
                      _("3 Leerst."),
+                     _("4-10 Leerst."),
                      _("> 10 Leerst."),
                      _("oo Leerst."),
                      _("Dummy"),
@@ -179,9 +180,10 @@ class PersonEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
             case 2: self.obj_filter = 'odd'
             case 3: self.obj_filter = 2
             case 4: self.obj_filter = 3
-            case 5: self.obj_filter = 10
-            case 7: self.obj_filter = 'dummy'
-            case _: self.obj_filter = 'oo'
+            case 5: self.obj_filter = 5
+            case 6: self.obj_filter = 10
+            case 7: self.obj_filter = 'oo'
+            case 8: self.obj_filter = 'dummy'
 
     def get_gid_list(self):
         # Collecting data
@@ -226,10 +228,12 @@ class PersonEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
                 self.obj_dict[2].append([prefix_obj % (sect_act), prefix_obj % (seq_base +2)])
             elif seq_diff == 4:
                 self.obj_dict[3].append([prefix_obj % (sect_act), prefix_obj % (seq_base +3)])
-            elif seq_diff > 100:
-                self.obj_dict['oo'].append([prefix_obj % (sect_act), prefix_obj % (self.obj_list[no] -1)])
-            elif seq_diff > 10:
+            elif 4 < seq_diff < 10:
+                self.obj_dict[5].append([prefix_obj % (sect_act), prefix_obj % (self.obj_list[no] -1)])
+            elif 9 < seq_diff < 100:
                 self.obj_dict[10].append([prefix_obj % (sect_act), prefix_obj % (self.obj_list[no] -1)])
+            elif seq_diff > 99:
+                self.obj_dict['oo'].append([prefix_obj % (sect_act), prefix_obj % (self.obj_list[no] -1)])
 
 
 # ------------------------------------------------------------------------

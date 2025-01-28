@@ -689,7 +689,7 @@ class GrampsPreferences(ConfigureDialog):
 
     def __init__(self, uistate, dbstate):
         """
-        replaced by MyPrfes __init__ in ..../plugin/themes.py
+        replaced by MyPrfes __init__ in .gramps/gramps-x.x/plugins/Themes/themes.py
         """
         page_funcs = (
             self.add_data_panel,
@@ -713,6 +713,8 @@ class GrampsPreferences(ConfigureDialog):
             config,
             on_close=update_constants,
         )
+        self._local_init(dbstate)
+
         help_btn = self.window.add_button(_("_Help"), Gtk.ResponseType.HELP)
         help_btn.connect(
             "clicked", lambda x: display_help(WIKI_HELP_PAGE, WIKI_HELP_SEC)
