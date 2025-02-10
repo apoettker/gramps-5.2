@@ -213,9 +213,12 @@ class PersonEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
             if obj == 'dummy': continue
             self.obj_dict[obj].clear()
         for no in range(1, len(self.obj_list)):
+            if 16600 < no < 17000:   # Family Pöttker ID area
+                continue
             seq_base = self.obj_list[no -1]
             seq_diff = self.obj_list[no] - seq_base
-            if seq_diff == 1: continue
+            if seq_diff == 1:
+                continue
             sect_act = seq_base +1
 
             if seq_diff == 2:
