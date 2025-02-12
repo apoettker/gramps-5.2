@@ -44,7 +44,7 @@ _ = glocale.translation.gettext
 from gramps.gen.db import DbTxn
 from gramps.gen.lib import EventRoleType, EventType, Person, Date
 from gramps.gen.utils.file import media_path_full
-from gramps.gen.utils.thumbnails import (get_thumbnail_path, SIZE_NORMAL, SIZE_LARGE)
+from gramps.gen.utils.thumbnails import (SIZE_NORMAL, SIZE_LARGE)   # get_thumbnail_path,
 from gramps.gen.plug.report import Report
 from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
@@ -56,7 +56,7 @@ from gramps.gen.utils.db import get_birth_or_fallback, get_death_or_fallback
 from gramps.gen.utils.location import get_location_list
 from gramps.gen.proxy import CacheProxyDb
 from gramps.gen.errors import ReportError
-from gramps.gen.display.place import displayer as _pd
+# from gramps.gen.display.place import displayer as _pd
 
 from gramps.plugins.libAP.libbase import *
 from gramps.plugins.libAP.libcolor import Color
@@ -601,8 +601,8 @@ class FamilyLinesReport(Report):
 
         self.maxparents_generation, self.maxchildren_generation, self.maxgeneration = 1, 1, 1
         self.maxspouse_generation = 0
-        self.shift_generation = 0
         self.cutoffpath = 5   # 2* (self.maxparents_generation + self.maxchildren_generation) +1
+        self.shift_generation = 0
 
         self.noderank, self.nodegroup, self.nodecluster = {}, {}, {}   #  Range: IND: horizontal, vertical, FAM: cluster
         self.noderotate, self.noteshift = [],{}   # Direction: horizontal, vertical
@@ -627,6 +627,7 @@ class FamilyLinesReport(Report):
                               },
             "ancestorspouseparents": {"enable": False,
                                "color": False,
+                               "childscount": False,
                                "images": {"enable": False, "exist": False, "onside": True}
                               },
             "ancestorfamily": {"enable": False,
@@ -650,6 +651,7 @@ class FamilyLinesReport(Report):
                              },
             "probandspouseparents": {"enable": False,
                               "color": False,
+                              "childscount": False,
                               "images": {"enable": False, "exist": False, "onside": True}
                              },
             "probandfamily": {"enable": False,
@@ -666,6 +668,7 @@ class FamilyLinesReport(Report):
             "descendantspouse": {"enable": False,
                                  "color": False,
                                  "uncolorlist": [],
+                                 "childscount": False,
                                  "images": {"enable": False, "exist": False, "onside": True}
                                 },
             "descendantspouseparents": {"enable": False,
@@ -717,8 +720,7 @@ class FamilyLinesReport(Report):
                 "descendant": {"fillcolor": "#D3D3D3"}
             },
 
-            "shiftgeneration": 0,
-            "reversegeneration": False,
+            "shiftgeneration": {"shift": 0, "reverse": False},
 
             "scheme": "",
             "threshold": 127.5,
@@ -814,6 +816,7 @@ class FamilyLinesReport(Report):
             "ids": {"style": 2,   # 0: null -, 1: same -, 2: own Line
                 "markstart": "[", "markstop": "]"
             },
+            "generation": {"shift": 0},   # shift generation
             "names": "shortname",   # "none", "briefname", "shortname", "surname"
             "number": {
                 "KekuleNo": False, "HenryNo": False,
@@ -821,7 +824,7 @@ class FamilyLinesReport(Report):
             },
             "dates": {"enable": True, "onlyyears": True},
             "places": {"enable": True, "extended": False, "images": False},
-            "images": {"enable": False, "exist": False}
+            "images": {"enable": False, "exist": False},
         }
 
         self.dot = {}
@@ -1068,6 +1071,17 @@ class FamilyLinesReport(Report):
 
     # ==========================================================================================================================
 
+    def get_birthdate(self, person):
+        """"""
+        birth_date = ''
+        birth_event = get_birth_or_fallback(self.database, person)
+        if birth_event:
+            date = birth_event.get_date_object()
+            if date.get_year_valid():
+                birth_date = self._get_date(Date(date.get_year()))
+
+        return birth_date
+
     def find_spouse_parents(self, spouse, generation):
         """"""
         for spouseparents_handle in spouse.get_parent_family_handle_list():
@@ -1086,7 +1100,8 @@ class FamilyLinesReport(Report):
                     self.generation[spousefather.gramps_id] = generation
                     self.parents[spousefather.gramps_id] = {'type': 'SP', 'PID': spousefather.gramps_id,
                                          'KekuleNo': '', 'XDNA': {}, 'EoL': True,
-                                         'spouse': False, 'handle': spousefather_handle}
+                                         'spouse': False, 'handle': spousefather_handle,
+                                         'sort': self.get_birthdate(spousefather)}
 
                 spousemother_handle = spouseparents.get_mother_handle()
                 if spousemother_handle:
@@ -1094,9 +1109,11 @@ class FamilyLinesReport(Report):
                     self.generation[spousemother.gramps_id] = generation
                     self.parents[spousemother.gramps_id] = {'type': 'SP', 'PID': spousemother.gramps_id,
                                          'KekuleNo': '', 'XDNA': {}, 'EoL': True,
-                                         'spouse': False, 'handle': spousemother_handle}
+                                         'spouse': False, 'handle': spousemother_handle,
+                                         'sort': self.get_birthdate(spousemother)}
 
     def _apply_parents(self, handle, base, index):
+
         # if we have a limit on the generations of parents, and we've reached
         # that limit, then don't attempt to find any more ancestors
         if (not handle) or (index >= 2**(self.max_generation +1)):
@@ -1109,22 +1126,24 @@ class FamilyLinesReport(Report):
             return
 
         # remember this generation!
-        gen_no = self.shift_generation -int(math.log2(index))
+        gen_no = self.shift_generation - int(math.log2(index)) \
+            if self.shift_generation == 0 else \
+            self.shift_generation + int(math.log2(index))
         pc_str = 'PC' + str(abs(gen_no)).zfill(2)   # Pedigree Collapse
         if not (pc_str in self.generation):
             self.generation[pc_str] = 0
         # remember this person!
         self.generation[pid] = gen_no # lesser generation for Ancestors
 
-        if pid == 'I07315':
+        if pid == 'I06789':
             a = 1
 
         if pid not in self.parents:
             # print('People handle: %s' % type(handle))
             self.generation[pc_str] += 1
-            self.parents[pid] = {'type': 'A', 'PID': pid,
-                                 'KekuleNo': index, 'XDNA': {},
-                                 'spouse': False, 'handle': handle}
+            self.parents[pid] = {'type': 'A', 'PID': pid, 'handle': handle,
+                                 'KekuleNo': index, 'XDNA': {}, 'spouse': False,
+                                 'sort': self.get_birthdate(person)}
             self.parents[pid]['base'] = base
             self.parents[pid]['EoL'] = False if 'N.N.' in ord_name.shortname else True
             nxG.add_node(person.gramps_id)
@@ -1167,8 +1186,8 @@ class FamilyLinesReport(Report):
                     if spouse_id not in self.uninterest_list and \
                        spouse_id not in self.parents:
                         self.generation[pc_str] += 1
-                        self.parents[spouse_id] = {'type': 'A', 'PID': spouse_id,
-                                                   'handle': spouse_handle}
+                        self.parents[spouse_id] = {'type': 'A', 'PID': spouse_id, 'handle': spouse_handle,
+                                                   'sort': self.get_birthdate(spouse)}
                         if index == 1:
                             self.parents[spouse_id]['type'] = 'P'
 
@@ -1215,7 +1234,7 @@ class FamilyLinesReport(Report):
 
         # now we find all the immediate ancestors of our people of interest
         self.max_generation = self.maxparents_generation
-        # self.shift_generation = self.color['shiftgeneration']
+        self.shift_generation = self.color['generationcolor']['shift']
         while self.ancestorsNotYetProcessed:
             key = self.ancestorsNotYetProcessed.pop()
             person = self.database.get_person_from_gramps_id(key)
@@ -1250,23 +1269,27 @@ class FamilyLinesReport(Report):
         if pid in self.include["unpidlist"]:
             return
 
-        if pid == 'I13768':
-            a = 1
-
-        # remember this generation!
-        gen_no = self.shift_generation + generation   # greater generation for descendants
+        # remember this generation! (greater > 0 generation for descendants)
+        gen_no = self.shift_generation + generation \
+          if self.shift_generation == 0 else \
+             self.shift_generation - generation
         gen_str = 'G' + str(gen_no).zfill(2)
         if not (gen_str in self.generation):
             self.generation[gen_str] = 0
+
+        if pid == 'I06789':
+            a = 1
 
         # remember this person!
         default_VG = {'count': 0, 'generation': {}}   #  VG: Verwandtschaftsgrad
         if pid not in self.children:
             self.generation[gen_str] += 1
-            self.generation[pid] = generation
+            self.generation[pid] = gen_no
 
             self.childrenCounter += 1
-            child_data = {'type': 'D', 'HenryNo': [], 'XDNA': {}, 'VG': default_VG, 'spouse': False, 'handle': handle}
+            child_data = {'type': 'D', 'HenryNo': [], 'handle': handle,
+                          'spouse': False, 'XDNA': {}, 'VG': default_VG,
+                          'sort': self.get_birthdate(person)}
             child_data['HenryNo'].append(henryno)
             self.children[pid] = child_data
 
@@ -1341,7 +1364,8 @@ class FamilyLinesReport(Report):
                 nxG.add_edge(spouse_id, family_id)   # fill nxG edges ...
 
                 if spouse_id not in self.children:
-                    self.children[spouse_id] = {'type': 'D', 'HenryNo': [], 'spouse': True, 'handle': spouse_handle}
+                    self.children[spouse_id] = {'type': 'D', 'HenryNo': [], 'handle': spouse_handle,
+                                                'spouse': True, 'sort': self.get_birthdate(person)}
                     self.generation[spouse_id] = gen_no
 
                     if family_id not in self.families:
@@ -1378,7 +1402,7 @@ class FamilyLinesReport(Report):
 
         # now we find all the children of our people of interest
         self.max_generation = self.maxchildren_generation
-        # self.shift_generation = self.color['shiftgeneration']
+        self.shift_generation = self.color['generationcolor']['shift']
         self.childrenCounter = 0
         while len(self.childrenNotYetProcessed) > 0:
             key = self.childrenNotYetProcessed.pop()
@@ -2251,8 +2275,8 @@ class FamilyLinesReport(Report):
         color_base = self.color['base'].BACKGROUND[color_scheme]
         color_number = len(color_base)
 
-        gen = color_number - self.color['shiftgeneration'] - generation \
-            if self.color['reversegeneration'] else self.color['shiftgeneration'] + abs(generation)
+        gen = color_number - generation \
+            if self.color['generationcolor']['reverse'] else abs(generation) # self.color['generationcolor']['shift']
         if 'C1' in self.color["scheme"] or \
            'C3' in self.color["scheme"]:   # Itten xx ColorRing 1/3 (Inner/Middle)
             cymk_color = list(color_base[gen]['CMYK'])
@@ -2617,8 +2641,6 @@ class FamilyLinesReport(Report):
     def write_individualnode(self, person):
         """"""
         def check_keys(*keys):
-            if pid == 'I06788':
-                a = 1
             result = False
             if not self.people[pid]['spouse']:
                 if self.people[pid]['type'] == 'A':
@@ -2630,6 +2652,8 @@ class FamilyLinesReport(Report):
                 if self.people[pid]['type'] == 'D':
                     result |= self.include['descendant']['enable'] and keys_true(self.include, 'descendant', keys) and \
                         not pid in self.color['descendant']['uncolorlist']
+                if self.people[pid]['type'] == 'SP':
+                    result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
             else:
                 if self.people[pid]['type'] == 'A':
                     result |= self.include['ancestorspouse']['enable'] and keys_true(self.include, 'ancestorspouse', keys) and \
@@ -2640,6 +2664,9 @@ class FamilyLinesReport(Report):
                 if self.people[pid]['type'] == 'D':
                     result |= self.include['descendantspouse']['enable'] and keys_true(self.include, 'descendantspouse', keys) and \
                         not pid in self.color['descendant']['uncolorlist']
+                if self.people[pid]['type'] == 'SP':
+                    result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
+
             return result
 
         pid = person.gramps_id
@@ -2854,7 +2881,7 @@ class FamilyLinesReport(Report):
             return date, place
 
         family_id = family.get_gramps_id()
-        if family_id == 'F0708':
+        if family_id == 'F1737':
             a = 1
 
         # figure out a wedding date or placename we can use
@@ -2866,11 +2893,13 @@ class FamilyLinesReport(Report):
                 event = self.database.get_event_from_handle(event_ref.ref)
                 if not (event_ref.get_role() == EventRoleType.FAMILY or
                         event_ref.get_role() == EventRoleType.PRIMARY): continue
+                evalue, estring = event.get_type().value, event.get_type().string
 
                 if (node['type'] == 'A' and keys_true(self.include, 'ancestorfamily', 'civil')) or \
                    (node['type'] == 'P' and keys_true(self.include, 'probandfamily', 'civil')) or \
                    (node['type'] == 'D' and keys_true(self.include, 'descendantfamily', 'civil')):
-                    if event.get_type() == EventType.MARRIAGE:
+                    if (event.get_type() == EventType.MARRIAGE) or \
+                       (event.get_type().value == EventType.CUSTOM and event.get_type().string == 'Heirat'):
                         marriage_date, marriage_place = get_date_place(event)
                     if event.get_type() == EventType.DIVORCE:
                         divorce_date, divorce_place = get_date_place(event)
@@ -2878,8 +2907,6 @@ class FamilyLinesReport(Report):
                 if (node['type'] == 'A' and keys_true(self.include, 'ancestorfamily', 'church')) or \
                    (node['type'] == 'P' and keys_true(self.include, 'probandfamily', 'church')) or \
                    (node['type'] == 'D' and keys_true(self.include, 'descendantfamily', 'church')):
-                    evalue = event.get_type().value
-                    estring = event.get_type().string
                     if (event.get_type().value == EventType.CUSTOM and event.get_type().string == 'Trauung'):
                         wedding_date, wedding_place = get_date_place(event)
 
@@ -2895,9 +2922,15 @@ class FamilyLinesReport(Report):
 
         # figure out the number of children (if any)
         children_str = None
+        """
         if (self.include['ancestorfamily']['childscount'] and self.generation[family_id] < 0) or \
            (self.include['probandfamily']['childscount']) or \
            (self.include['descendantfamily']['childscount'] and self.generation[family_id] > 0):
+        """
+        if (self.include['ancestorfamily']['childscount'] and self.families[family_id]['type'] == 'A') or \
+           (self.include['probandfamily']['childscount'] and self.families[family_id]['type'] == 'P') or \
+           (self.include['descendantfamily']['childscount'] and self.families[family_id]['type'] == 'D') or \
+           (self.include['descendantspouseparents']['childscount'] and self.families[family_id]['type'] == 'SP'):
             child_count = len(family.get_child_ref_list())
             if child_count >= 1:
                 children_str = self.ngettext("{number_of} child", "{number_of} children", \
@@ -3518,7 +3551,8 @@ class FamilyLinesReport(Report):
                     local_people[key] = self.people[key]['handle']
 
         # loop through all the people we need to output
-        for pid in local_people: # sorted()
+        local_sorted = sorted(local_people.keys(), key=lambda x: (local_people[x]['sort']))
+        for pid in local_sorted: #
             # ptype = local_people[pid]['type']
             person = self.database.get_person_from_gramps_id(pid)
             self.write_individualnode(person)

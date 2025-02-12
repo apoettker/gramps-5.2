@@ -73,16 +73,22 @@ class Citation(
     CONF_LOW = 1
     CONF_VERY_LOW = 0
 
-    def __init__(self):
+    def __init__(self, source=None):
         """Create a new Citation instance."""
-        PrimaryObject.__init__(self)
-        MediaBase.__init__(self)  #  7
-        NoteBase.__init__(self)  #  6
-        DateBase.__init__(self)  #  2
-        self.source_handle = None  #  5
-        self.page = ""  #  3
-        self.confidence = Citation.CONF_NORMAL  #  4
-        SrcAttributeBase.__init__(self)  #  8
+        PrimaryObject.__init__(self, source=source)
+        MediaBase.__init__(self, source=source)   # 7
+        NoteBase.__init__(self, source=source)   # 6
+        DateBase.__init__(self, source=source)   # 2
+        SrcAttributeBase.__init__(self, source=source)   # 8
+
+        if source:
+            self.page = source.page
+            self.confidence = source.confidence
+            self.source_handle = source.source_handle
+        else:
+            self.source_handle = None  #  5
+            self.page = ""  #  3
+            self.confidence = Citation.CONF_NORMAL  #  4
 
     @classmethod
     def get_schema(cls):

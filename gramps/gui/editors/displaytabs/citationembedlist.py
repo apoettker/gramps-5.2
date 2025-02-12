@@ -3,6 +3,7 @@
 #
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2011       Tim G L Lyons
+# Copyright (C) 2025       Alois Poettker
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -31,6 +32,7 @@ import logging
 # GTK/Gnome modules
 #
 # -------------------------------------------------------------------------
+from gi.repository import Gtk
 from gi.repository import GLib
 
 # -------------------------------------------------------------------------
@@ -39,6 +41,8 @@ from gi.repository import GLib
 #
 # -------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
+
+from gramps.gen.db import DbTxn
 from gramps.gen.errors import WindowActiveError
 from gramps.gen.lib import Citation, Source
 from ...dbguielement import DbGUIElement
@@ -72,12 +76,14 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
         "del": _("Remove the existing citation"),
         "edit": _("Edit the selected citation"),
         "share": _("Add an existing citation or source"),
+        "clone" : _("Clone an existing citation"),
+        "merge" : _("Merge two existing citations"),
         "up": _("Move the selected citation upwards"),
         "down": _("Move the selected citation downwards"),
     }
 
     # index = column in model. Value =
-    #  (name, sortcol in model, width, markup/text, weigth_col
+    #   (name, sortcol in model, width, markup/text, weigth_col)
     _column_names = [
         (_("Title"), 0, 350, TEXT_COL, -1, None),
         (_("Author"), 1, 200, TEXT_COL, -1, None),
@@ -103,21 +109,54 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
             CitationRefModel,
             config_key,
             share_button=True,
+            clone_button=True,
+            merge_button=True,
             move_buttons=True,
         )
         DbGUIElement.__init__(self, dbstate.db)
         self.callman.register_handles({"citation": self.data})
 
+        # Gtk mode to allow multiple selection of list entries
+        self.selection.set_mode(Gtk.SelectionMode.MULTIPLE)
+
+    def _selection_changed(self, obj=None):
+        """
+        Callback method called after user selection of a row
+        overwrites method in buttontab.py
+        """
+        if self.dirty_selection:
+            return
+
+        # picks the actual selected rows
+        self.selected_list = []   # Selection list (eg. multiselection)
+        (model, pathlist) = self.selection.get_selected_rows()
+        for path in pathlist:
+            iter = model.get_iter(path)
+            if iter is not None:
+                value = model.get_value(iter, self._HANDLE_COL)   # (Index, Citation)
+                self.selected_list.append(value)   # Citation handle
+
+        # manage the sensitivity of several buttons to avoid warning messages
+        if self.selected_list:
+            btn = len(self.selected_list) == 1
+            self.edit_btn.set_sensitive(btn)
+            self.clone_btn.set_sensitive(btn)
+            self.del_btn.set_sensitive(btn)
+
+            btn = len(self.selected_list) == 2
+            self.merge_btn.set_sensitive(btn)
+
     def _connect_db_signals(self):
         """
         Implement base class DbGUIElement method
         """
-        # citation: citation-rebuild closes the editors, so no need to connect
-        # to it
+        # citation: citation-rebuild closes the editors, so no need to connect to it
         self.callman.register_callbacks(
             {
                 "citation-delete": self.citation_delete,
                 "citation-update": self.citation_update,
+                # "citation-clone": self.citation_clone,
+                # "citation-merge": self.citation_merge,
             }
         )
         self.callman.connect_all(keys=["citation"])
@@ -158,13 +197,13 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
                 self.track,
                 Citation(),
                 Source(),
-                self.add_callback,
+                self.object_added,
                 self.callertitle,
             )
         except WindowActiveError:
             pass
 
-    def add_callback(self, value):
+    def object_added(self, value):
         """
         Called to update the screen when a new citation is added
         """
@@ -193,7 +232,7 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
                         self.track,
                         Citation(),
                         objct,
-                        callback=self.add_callback,
+                        callback=self.object_added,
                         callertitle=self.callertitle,
                     )
                 except WindowActiveError:
@@ -213,7 +252,7 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
                         self.uistate,
                         self.track,
                         objct,
-                        callback=self.add_callback,
+                        callback=self.object_added,
                         callertitle=self.callertitle,
                     )
                 except WindowActiveError:
@@ -264,6 +303,62 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
             except WindowActiveError:
                 pass
 
+
+    def clone_button_clicked(self, obj):
+        # Method  called with the Clone button is clicked.
+
+        source_ref = self.get_selected()
+        if source_ref:
+            source_citation = self.dbstate.db.get_citation_from_handle(source_ref)
+
+            try:
+                citation = Citation(source=source_citation)
+                citation.set_gramps_id(self.dbstate.db.find_next_citation_gramps_id())
+                citation.set_handle(None)
+                source_handle = citation.get_reference_handle()
+                source = self.dbstate.db.get_source_from_handle(source_handle)
+                """
+                self.changed = True
+                with DbTxn(_("Clone Citation (%s)") % citation.gramps_id,
+                           self.dbstate.db) as trans:
+                    self.dbstate.db.add_citation(citation, trans)
+                """
+                self.action = 'Citation-Clone'
+                from .. import EditCitation
+                EditCitation(
+                    self.dbstate,
+                    self.uistate,
+                    self.track,
+                    citation,
+                    source,
+                    self.object_added,
+                    self.callertitle,
+                )
+            except WindowActiveError:
+                pass
+
+    def merge_button_clicked(self, obj):
+        # Method called with the Merge button is clicked.
+
+        # double check for properly work; see eventembedlist/_selection_changed
+        if len(self.selected_list) != 2:
+            return
+
+        # Checks if event are not equal
+        if self.selected_list[0] == self.selected_list[1]:
+            from ...dialog import WarningDialog
+            WarningDialog(
+                _("Cannot merge this references"),
+                _("This is one event, but with different roles."),
+                parent=self.uistate.window, )
+            return
+
+        self.changed = True
+        self.action = 'Citation-Merge'
+        from ...merge import MergeCitation
+        MergeCitation(self.dbstate, self.uistate, self.track, \
+                      self.selected_list[0], self.selected_list[1])
+
     def citation_delete(self, del_citation_handle_list):
         """
         Outside of this tab citation objects have been deleted. Check if tab
@@ -304,7 +399,7 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
                         self.uistate,
                         self.track,
                         objct,
-                        callback=self.add_callback,
+                        callback=self.object_added,
                         callertitle=self.callertitle,
                     )
                 except WindowActiveError:
@@ -334,7 +429,7 @@ class CitationEmbedList(EmbeddedList, DbGUIElement):
                         self.track,
                         Citation(),
                         objct,
-                        callback=self.add_callback,
+                        callback=self.object_added,
                         callertitle=self.callertitle,
                     )
                 except WindowActiveError:

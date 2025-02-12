@@ -27,7 +27,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
-""" Graphviz adapter for Graphs """
+"""Graphviz adapter for Graphs """
 # -------------------------------------------------------------------------
 #
 # Standard Python modules
@@ -45,7 +45,6 @@ from subprocess import Popen, PIPE
 #
 # -------------------------------------------------------------------------
 from ...const import GRAMPS_LOCALE as glocale
-
 _ = glocale.translation.gettext
 from ...utils.file import search_for, where_is
 from . import BaseDoc
@@ -58,56 +57,46 @@ from ...constfunc import win
 #
 # -------------------------------------------------------------------------
 import logging
-
 LOG = logging.getLogger(".graphdoc")
 
 # -------------------------------------------------------------------------
 #
 # Private Constants
 #
-# -------------------------------------------------------------------------
-_FONTS = [
-    {"name": _("Default"), "value": "serif"},
-    {"name": _("PostScript / Helvetica"), "value": "Helvetica"},
-    {"name": _("TrueType / FreeSans"), "value": "FreeSans"},
-]
+# ------------------------------------------------------------------------------
+_FONTS = [{"name" : _("Default"), "value" : "serif"},
+          {"name" : _("PostScript / Helvetica"), "value" : "Helvetica"},
+          {"name" : _("TrueType / FreeSans"), "value" : "FreeSans"}]
 
-_RANKDIR = [
-    {"name": _("Vertical (↓)"), "value": "TB"},
-    {"name": _("Vertical (↑)"), "value": "BT"},
-    {"name": _("Horizontal (→)"), "value": "LR"},
-    {"name": _("Horizontal (←)"), "value": "RL"},
-]
+_RANKDIR = [{"name" : _("Vertical (↓)"), "value"   : "TB"},
+            {"name" : _("Vertical (↑)"), "value"   : "BT"},
+            {"name" : _("Horizontal (→)"), "value" : "LR"},
+            {"name" : _("Horizontal (←)"), "value" : "RL"}]
 
-_NODE_PORTS = {"TB": ("n", "s"), "BT": ("s", "n"), "LR": ("w", "e"), "RL": ("e", "w")}
+_NODE_PORTS = {"TB" : ("n", "s"),
+               "BT" : ("s", "n"),
+               "LR" : ("w", "e"),
+               "RL" : ("e", "w")}
 
-_PAGEDIR = [
-    {"name": _("Bottom, left"), "value": "BL"},
-    {"name": _("Bottom, right"), "value": "BR"},
-    {"name": _("Top, left"), "value": "TL"},
-    {"name": _("Top, Right"), "value": "TR"},
-    {"name": _("Right, bottom"), "value": "RB"},
-    {"name": _("Right, top"), "value": "RT"},
-    {"name": _("Left, bottom"), "value": "LB"},
-    {"name": _("Left, top"), "value": "LT"},
-]
+_PAGEDIR = [{"name" : _("Bottom, left"), "value"  : "BL"},
+            {"name" : _("Bottom, right"), "value" : "BR"},
+            {"name" : _("Top, left"), "value"     : "TL"},
+            {"name" : _("Top, Right"), "value"    : "TR"},
+            {"name" : _("Right, bottom"), "value" : "RB"},
+            {"name" : _("Right, top"), "value"    : "RT"},
+            {"name" : _("Left, bottom"), "value"  : "LB"},
+            {"name" : _("Left, top"), "value"     : "LT"}]
 
-_RATIO = [
-    {"name": _("Compress to minimal size"), "value": "compress"},
-    {"name": _("Fill the given area"), "value": "fill"},
-    {"name": _("Expand uniformly"), "value": "expand"},
-]
+_RATIO = [{"name" : _("Compress to minimal size"), "value": "compress"},
+          {"name" : _("Fill the given area"), "value": "fill"},
+          {"name" : _("Expand uniformly"), "value": "expand"}]
 
-_NOTELOC = [{"name": _("Top"), "value": "t"}, {"name": _("Bottom"), "value": "b"}]
+_NOTELOC = [{"name" : _("Top"), "value" : "t"},
+            {"name" : _("Bottom"), "value" : "b"}]
 
-_SPLINE = [
-    {"name": _("Straight"), "value": "false"},
-    {
-        "name": _("Curved"),
-        "value": "true",
-    },
-    {"name": _("Orthogonal"), "value": "ortho"},
-]
+_SPLINE = [{"name" : _("Straight"), "value" : "false"},
+           {"name" : _("Curved"), "value" : "true", },
+           {"name" : _("Orthogonal"), "value" : 'ortho'}]
 
 if win():
     _DOT_FOUND = search_for("dot.exe")
@@ -137,7 +126,6 @@ class GVOptions:
     Defines all of the controls necessary
     to configure the graph reports.
     """
-
     def __init__(self):
         self.h_pages = None
         self.v_pages = None
@@ -299,6 +287,13 @@ class GVOptions:
         )
         menu.add_option(category, "ranksep", ranksep)
 
+        use_subgraphs = BooleanOption(_('Use subgraphs'), True)
+        use_subgraphs.set_help(_("Subgraphs can help Graphviz position "
+                                 "spouses together, but with non-trivial "
+                                 "graphs will result in longer lines and "
+                                 "larger graphs."))
+        menu.add_option(category, "usesubgraphs", use_subgraphs)
+
         ################################
         category = _("Note")
         ################################
@@ -343,17 +338,9 @@ class GVDoc(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def add_node(
-        self,
-        node_id,
-        label,
-        shape="",
-        color="",
-        style="",
-        fillcolor="",
-        url="",
-        htmloutput=False,
-    ):
+    def add_node(self, node_id, label="", shape="", color="",
+                 style="", fillcolor="", url="", htmloutput=False,
+                 extension=""):
         """
         Add a node to this graph. Nodes can be different shapes like boxes and
         circles.
@@ -383,7 +370,7 @@ class GVDoc(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def add_link(self, id1, id2, style="", head="", tail="", comment=""):
+    def add_link(self, id1, id2, style="", head="", tail="", extension="", comment=""):
         """
         Add a link between two nodes.
 
@@ -469,7 +456,6 @@ class GVDocBase(BaseDoc, GVDoc):
     inherit from this class will only need to implement the close function.
     The close function will generate the actual file of the appropriate type.
     """
-
     def __init__(self, options, paper_style, uistate=None):
         BaseDoc.__init__(self, None, paper_style, uistate=uistate)
 
@@ -479,9 +465,12 @@ class GVDocBase(BaseDoc, GVDoc):
 
         get_option = options.menu.get_option_by_name
 
+        self.concentrate = "False"   # 220607
         self.dpi = get_option("dpi").get_value()
+        self.bgcolor = "white"
         self.fontfamily = get_option("font_family").get_value()
         self.fontsize = get_option("font_size").get_value()
+        self.fontextra = ""   # 220607: add. for attr. "Fixedsize"
         self.hpages = get_option("h_pages").get_value()
         self.nodesep = get_option("nodesep").get_value()
         self.noteloc = get_option("noteloc").get_value()
@@ -492,6 +481,7 @@ class GVDocBase(BaseDoc, GVDoc):
         self.ranksep = get_option("ranksep").get_value()
         self.ratio = get_option("ratio").get_value()
         self.vpages = get_option("v_pages").get_value()
+        self.usesubgraphs = get_option("usesubgraphs").get_value()
         self.spline = get_option("spline").get_value()
         self.node_ports = get_option("node_ports").get_value()
 
@@ -500,53 +490,55 @@ class GVDocBase(BaseDoc, GVDoc):
         # Subtract 0.01" from the drawing area to make some room between
         # this area and the margin in order to compensate for different
         # rounding errors internally in dot
-        sizew = (
-            paper_size.get_width()
-            - self._paper.get_left_margin()
-            - self._paper.get_right_margin()
-        ) / 2.54 - 0.01
-        sizeh = (
-            paper_size.get_height()
-            - self._paper.get_top_margin()
-            - self._paper.get_bottom_margin()
-        ) / 2.54 - 0.01
+        self.sizew = (paper_size.get_width() -
+                 self._paper.get_left_margin() -
+                 self._paper.get_right_margin()) / 2.54 - 0.01
+        self.sizeh = (paper_size.get_height() -
+                 self._paper.get_top_margin() -
+                 self._paper.get_bottom_margin()) / 2.54 - 0.01
 
-        pheight = paper_size.get_height_inches()
-        pwidth = paper_size.get_width_inches()
+        self.pheight = paper_size.get_height_inches()
+        self.pwidth = paper_size.get_width_inches()
 
-        xmargin = self._paper.get_left_margin() / 2.54
-        ymargin = self._paper.get_top_margin() / 2.54
+        self.xmargin = self._paper.get_left_margin() / 2.54
+        self.ymargin = self._paper.get_top_margin() / 2.54
 
-        sizew *= self.hpages
-        sizeh *= self.vpages
+        self.sizew *= self.hpages
+        self.sizeh *= self.vpages
 
+    def init(self):
+        """"""
         self.write(
-            "digraph GRAMPS_graph\n"
-            "{\n"
-            "  bgcolor=white;\n"
+            'digraph GRAMPS_graph\n'
+            '{\n'
+            '  truecolor=true;\n'
+            '  bgcolor="%s";\n' % self.bgcolor +
+            # '  bgcolor="transparent";\n'
             '  center="true"; \n'
             '  charset="utf8";\n'
-            '  concentrate="false";\n'
-            + '  dpi="%d";\n' % self.dpi
-            + "  graph [fontsize=%d];\n" % self.fontsize
-            + '  margin="%3.2f,%3.2f"; \n' % (xmargin, ymargin)
-            + '  mclimit="99";\n'
-            + '  nodesep="%.2f";\n' % self.nodesep
-            + '  outputorder="edgesfirst";\n'
-            + ("#" if self.hpages == self.vpages == 1 else "")
-            +
+            '  concentrate=%r;\n' % self.concentrate +
+            '  dpi="%d";\n' % self.dpi +
+            '  graph [fontsize=%d];\n' % self.fontsize +
+            '  margin="%3.2f,%3.2f"; \n' % (self.xmargin, self.ymargin) +
+            '  mclimit="99";\n' +
+            '  nodesep="%.2f";\n' % self.nodesep +
+            '  outputorder="edgesfirst";\n' +
+            ('#' if self.hpages == self.vpages == 1 else '') +
             # comment out "page=" if the graph is on 1 page (bug #2121)
-            '  page="%3.2f,%3.2f";\n' % (pwidth, pheight)
-            + '  pagedir="%s";\n' % self.pagedir
-            + '  rankdir="%s";\n' % self.rankdir
-            + '  ranksep="%.2f";\n' % self.ranksep
-            + '  ratio="%s";\n' % self.ratio
-            + '  searchsize="100";\n'
-            + '  size="%3.2f,%3.2f"; \n' % (sizew, sizeh)
-            + '  splines="%s";\n' % self.spline
-            + "\n"
-            + "  edge [len=0.5 style=solid fontsize=%d];\n" % self.fontsize
-        )
+            '  page="%3.2f,%3.2f";\n' % (self.pwidth, self.pheight) +
+            '  pagedir="%s";\n' % self.pagedir +
+            '  rankdir="%s";\n' % self.rankdir +
+            '  ranksep="%.2f";\n' % self.ranksep +
+            '  ratio="%s";\n' % self.ratio +
+            '  searchsize="100";\n' +
+            '  size="%3.2f,%3.2f"; \n' % (self.sizew, self.sizeh) +
+            '  splines="%s";\n' % self.spline +
+            '\n')
+
+        self.write('  edge [style=solid arrowsize=0.5 fontname="%s" fontsize=%d ' % (self.fontfamily, self.fontsize))
+        if self.fontextra: self.write(self.fontextra)
+        self.write(' ]\n')
+
         if self.node_ports:
             self.write(
                 "  edge [headport=%s tailport=%s];\n" % _NODE_PORTS[self.rankdir]
@@ -579,33 +571,24 @@ class GVDocBase(BaseDoc, GVDoc):
             label = ""
             for line in self.note:  # for every line in the note...
                 line = line.strip()  # ...strip whitespace from this line...
-                if line != "":  # ...and if we still have a line...
-                    if label != "":  # ...see if we need to insert a newline...
-                        label += "\\n"
-                    label += line.replace('"', '\\"')
+                if line != '':       # ...and if we still have a line...
+                    if label != '':  # ...see if we need to insert a newline...
+                        label += '\\n'
+                    label += line.replace('"', '\\\"')
 
             # after all that, see if we have a label to display
             if label != "":
                 self.write(
-                    "\n"
-                    + '  label="%s";\n' % label
-                    + '  labelloc="%s";\n' % self.noteloc
-                    + '  fontsize="%d";\n' % self.notesize
-                )
+                    '\n' +
+                    '  label="%s";\n' % label +
+                    '  labelloc="%s";\n' % self.noteloc +
+                    '  fontsize="%d";\n' % self.notesize)
 
-        self.write("}\n\n")
+        self.write('}\n\n')
 
-    def add_node(
-        self,
-        node_id,
-        label,
-        shape="",
-        color="",
-        style="",
-        fillcolor="",
-        url="",
-        htmloutput=False,
-    ):
+    def add_node(self, node_id, label="", shape="", color="",
+                 style="", fillcolor="", url="", htmloutput=False,
+                 extension=""):
         """
         Add a node to this graph. Nodes can be different shapes like boxes and
         circles.
@@ -626,6 +609,9 @@ class GVDocBase(BaseDoc, GVDoc):
         if style:
             text += ' style="%s"' % style
 
+        if extension:
+            text += ' %s' % extension
+
         # note that we always output a label -- even if an empty string --
         # otherwise Graphviz uses the node ID as the label which is unlikely
         # to be what the user wants to see in the graph
@@ -638,18 +624,27 @@ class GVDocBase(BaseDoc, GVDoc):
             text += ' URL="%s"' % url
 
         text += " ]"
-        self.write('  "%s" %s;\n' % (esc(node_id), text))
 
-    def add_link(self, id1, id2, style="", head="", tail="", comment=""):
+        self.write('  "%s" %s;\n' % (node_id, text))
+
+    def add_link(self, id1, id2, style="", head="", tail="", extension = "", comment=""):
         """
         Add a link between two nodes.
 
         Implements GVDocBase.add_link().
         """
-        self.write('  "%s" -> "%s"' % (esc(id1), esc(id2)))
+        id1_str = '"%s"' % id1
+        if ':' in id1:
+            id1_list = id1.split(':')
+            id1_str = '"%s":%s' % (id1_list[0], id1_list[1])
+        id2_str = '"%s"' % id2
+        if ':' in id2:
+            id2_list = id2.split(':')
+            id2_str = '"%s":%s' % (id2_list[0], id2_list[1])
+        self.write('  %s -> %s' % (id1_str, id2_str))
 
-        if style or head or tail:
-            self.write(" [")
+        if style or head or tail or extension:
+            self.write(' [')
 
             if style:
                 self.write(" style=%s" % style)
@@ -666,10 +661,14 @@ class GVDocBase(BaseDoc, GVDoc):
                 if tail:
                     self.write(" dir=back")
                 else:
-                    self.write(" dir=none")
-            self.write(" ]")
+                    self.write(' dir=none')
 
-        self.write(";")
+            if extension:
+                self.write(' %s' % extension)
+
+            self.write(' ]')
+
+        self.write(';')
 
         if comment:
             self.write(" // %s" % comment)
@@ -698,7 +697,7 @@ class GVDocBase(BaseDoc, GVDoc):
 
         Implements GVDocBase.add_samerank().
         """
-        self.write('  {rank=same "%s" "%s"}\n' % (esc(id1), esc(id2)))
+        self.write('  {rank=same "%s" "%s"}\n' % (id1, id2))
 
     def rewrite_label(self, id, label):
         """
@@ -706,11 +705,12 @@ class GVDocBase(BaseDoc, GVDoc):
 
         Implements GVDocBase.rewrite_label().
         """
-        self.write('  "%s" [label = "%s"]\n' % (esc(id), label))
+        self.write('  "%s" [label = "%s"]\n' % (id, label))
 
     def start_subgraph(self, graph_id):
-        """Implement GVDocBase.start_subgraph()"""
-        graph_id = graph_id.replace(" ", "_")  # for user-defined ID with space
+        """Implement GVDocBase.start_subgraph() """
+        graph_id = graph_id.replace(' ', '_')  # for user-defined ID with space
+        graph_id = graph_id.replace('.', '_')  # for user-defined ID with space
         self.write(
             "  subgraph cluster_%s\n" % graph_id + "  {\n" + '  style="invis";\n'
         )  # no border around subgraph (#0002176)
@@ -795,10 +795,9 @@ class GVPsDoc(GVDocBase):
         # Problem with dot 2.26.3 and later and multiple pages, which gives
         # "cairo: out of memory" If the :cairo is skipped for these cases it
         # gives bad result for non-Latin-1 characters (utf-8).
-        if (dotversion.find("2.26.3") or dotversion.find("2.28.0") != -1) and (
-            self.vpages * self.hpages
-        ) > 1:
-            command = command.replace(":cairo", "")
+        if (dotversion.find('2.26.3') or dotversion.find('2.28.0') != -1) and \
+                (self.vpages * self.hpages) > 1:
+            command = command.replace(':cairo', '')
         os.system(command)
         # Delete the temporary dot file
         os.remove(tmp_dot)
@@ -902,11 +901,14 @@ class GVPngDoc(GVDocBase):
         dotfile = os.fdopen(handle, "wb")
         dotfile.write(self._dot.getvalue())
         dotfile.close()
+
         # Generate the PNG file.
         os.system('dot -Tpng -o"%s" "%s"' % (self._filename, tmp_dot))
+        os.system('cp "%s" "%s"' % (tmp_dot, self.sourcefile))
+        # os.system('sfdp -Tpng -o"%s" "%s"' % (self._filename, tmp_dot))
 
         # Delete the temporary dot file
-        os.remove(tmp_dot)
+        # os.remove(tmp_dot)
 
 
 # ------------------------------------------------------------------------------
@@ -1086,17 +1088,11 @@ class GVPdfGsDoc(GVDocBase):
         # Convert to PDF using ghostscript
         list_of_pieces = []
 
-        x_rng = (
-            range(1, self.hpages + 1)
-            if "L" in self.pagedir
+        x_rng = range(1, self.hpages + 1) if 'L' in self.pagedir \
             else range(self.hpages, 0, -1)
-        )
-        y_rng = (
-            range(1, self.vpages + 1)
-            if "B" in self.pagedir
+        y_rng = range(1, self.vpages + 1) if 'B' in self.pagedir \
             else range(self.vpages, 0, -1)
-        )
-        if self.pagedir[0] in "TB":
+        if self.pagedir[0] in 'TB':
             the_list = ((__x, __y) for __y in y_rng for __x in x_rng)
         else:
             the_list = ((__x, __y) for __x in x_rng for __y in y_rng)
@@ -1107,26 +1103,14 @@ class GVPdfGsDoc(GVDocBase):
             tmp_pdf_piece = "%s_%d_%d.pdf" % (tmp_ps, __x, __y)
             list_of_pieces.append(tmp_pdf_piece)
             # Generate Ghostscript code
-            command = (
-                "%s -q -dBATCH -dNOPAUSE -dSAFER "
-                "-dDEVICEWIDTHPOINTS=%d -dDEVICEHEIGHTPOINTS=%d "
-                '-dFIXEDMEDIA -sOutputFile="%s" -sDEVICE=pdfwrite '
-                '-c "<</.HWMargins [%d %d %d %d] /PageOffset [%d %d]>> '
-                'setpagedevice" -f "%s"'
-                % (
-                    _GS_CMD,
-                    width_pt + 10,
-                    height_pt + 10,
-                    tmp_pdf_piece,
-                    margin_l,
-                    margin_b,
-                    margin_r,
-                    margin_t,
-                    page_offset_x + 5,
-                    page_offset_y + 5,
-                    tmp_ps,
-                )
-            )
+            command = '%s -q -dBATCH -dNOPAUSE -dSAFER '\
+                '-dDEVICEWIDTHPOINTS=%d -dDEVICEHEIGHTPOINTS=%d '\
+                '-dFIXEDMEDIA -sOutputFile="%s" -sDEVICE=pdfwrite '\
+                '-c "<</.HWMargins [%d %d %d %d] /PageOffset [%d %d]>> '\
+                'setpagedevice" -f "%s"' % (
+                    _GS_CMD, width_pt + 10, height_pt + 10, tmp_pdf_piece,
+                    margin_l, margin_b, margin_r, margin_t,
+                    page_offset_x + 5, page_offset_y + 5, tmp_ps)
             # Execute Ghostscript
             os.system(command)
         # Merge pieces to single multipage PDF ;
@@ -1143,7 +1127,6 @@ class GVPdfGsDoc(GVDocBase):
             os.remove(tmp_pdf_piece)
         os.remove(tmp_dot)
 
-
 # ------------------------------------------------------------------------------
 #
 # Various Graphviz formats.
@@ -1153,92 +1136,56 @@ FORMATS = []
 
 if _DOT_FOUND:
     if _GS_CMD != "":
-        FORMATS += [
-            {
-                "type": "gspdf",
-                "ext": "pdf",
-                "descr": _("PDF (Ghostscript)"),
-                "mime": "application/pdf",
-                "class": GVPdfGsDoc,
-            }
-        ]
+        FORMATS += [{'type' : "gspdf",
+                     'ext'  : "pdf",
+                     'descr': _("PDF (Ghostscript)"),
+                     'mime' : "application/pdf",
+                     'class': GVPdfGsDoc}]
 
-    FORMATS += [
-        {
-            "type": "gvpdf",
-            "ext": "pdf",
-            "descr": _("PDF (Graphviz)"),
-            "mime": "application/pdf",
-            "class": GVPdfGvDoc,
-        }
-    ]
+    FORMATS += [{'type' : "gvpdf",
+                 'ext'  : "pdf",
+                 'descr': _("PDF (Graphviz)"),
+                 'mime' : "application/pdf",
+                 'class': GVPdfGvDoc}]
 
-    FORMATS += [
-        {
-            "type": "ps",
-            "ext": "ps",
-            "descr": _("PostScript"),
-            "mime": "application/postscript",
-            "class": GVPsDoc,
-        }
-    ]
+    FORMATS += [{'type' : "ps",
+                 'ext'  : "ps",
+                 'descr': _("PostScript"),
+                 'mime' : "application/postscript",
+                 'class': GVPsDoc}]
 
-    FORMATS += [
-        {
-            "type": "svg",
-            "ext": "svg",
-            "descr": _("Structured Vector Graphics (SVG)"),
-            "mime": "image/svg",
-            "class": GVSvgDoc,
-        }
-    ]
+    FORMATS += [{'type' : "svg",
+                 'ext'  : "svg",
+                 'descr': _("Structured Vector Graphics (SVG)"),
+                 'mime' : "image/svg",
+                 'class': GVSvgDoc}]
 
-    FORMATS += [
-        {
-            "type": "svgz",
-            "ext": "svgz",
-            "descr": _("Compressed Structured Vector Graphs (SVGZ)"),
-            "mime": "image/svgz",
-            "class": GVSvgzDoc,
-        }
-    ]
+    FORMATS += [{'type' : "svgz",
+                 'ext'  : "svgz",
+                 'descr': _("Compressed Structured Vector Graphs (SVGZ)"),
+                 'mime' : "image/svgz",
+                 'class': GVSvgzDoc}]
 
-    FORMATS += [
-        {
-            "type": "jpg",
-            "ext": "jpg",
-            "descr": _("JPEG image"),
-            "mime": "image/jpeg",
-            "class": GVJpegDoc,
-        }
-    ]
+    FORMATS += [{'type' : "jpg",
+                 'ext'  : "jpg",
+                 'descr': _("JPEG image"),
+                 'mime' : "image/jpeg",
+                 'class': GVJpegDoc}]
 
-    FORMATS += [
-        {
-            "type": "gif",
-            "ext": "gif",
-            "descr": _("GIF image"),
-            "mime": "image/gif",
-            "class": GVGifDoc,
-        }
-    ]
+    FORMATS += [{'type' : "gif",
+                 'ext'  : "gif",
+                 'descr': _("GIF image"),
+                 'mime' : "image/gif",
+                 'class': GVGifDoc}]
 
-    FORMATS += [
-        {
-            "type": "png",
-            "ext": "png",
-            "descr": _("PNG image"),
-            "mime": "image/png",
-            "class": GVPngDoc,
-        }
-    ]
+    FORMATS += [{'type' : "png",
+                 'ext'  : "png",
+                 'descr': _("PNG image"),
+                 'mime' : "image/png",
+                 'class': GVPngDoc}]
 
-FORMATS += [
-    {
-        "type": "dot",
-        "ext": "gv",
-        "descr": _("Graphviz File"),
-        "mime": "text/x-graphviz",
-        "class": GVDotDoc,
-    }
-]
+FORMATS += [{'type' : "dot",
+             'ext'  : "gv",
+             'descr': _("Graphviz File"),
+             'mime' : "text/x-graphviz",
+             'class': GVDotDoc}]
