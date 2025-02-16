@@ -363,7 +363,7 @@ class EditEvent(EditPrimary):
         obj_date = self.obj.get_date_object()
         obj_place = self.obj.get_place_handle()
         obj_desc = self.obj.get_description()
-
+        """
         obj_citation_new = True
         obj_citation_handlelist = self.obj.get_citation_list()
         if len(obj_citation_handlelist) == 1:
@@ -376,7 +376,7 @@ class EditEvent(EditPrimary):
         obj_media_handlelist = self.obj.get_media_list()
         if len(obj_media_handlelist) == 1:
             obj_media_new = self.db.get_media_from_handle(obj_media_handlelist[0]).desc != 'Multiple'
-
+        """
         self.uistate.set_busy_cursor(True)
         with DbTxn(_("Edit Multi-Event"), self.db, batch=True) as trans:
             for handle in self.obj.multiple["events"]:
@@ -399,7 +399,7 @@ class EditEvent(EditPrimary):
                 if dflt_desc != obj_desc:
                     slct_event.set_description(obj_desc)
                     slct_change = True
-
+                """
                 dflt_citation = self.obj.multiple["citation"]
                 if obj_citation_new and obj_citation_handlelist != dflt_citation:
                     slct_event.citation_list.extend(obj_citation_handlelist)
@@ -412,7 +412,7 @@ class EditEvent(EditPrimary):
                 if obj_media_new and obj_media_handlelist != dflt_media:
                     slct_event.media_list.extend(obj_media_handlelist)
                     slct_change = True
-
+                """
                 if slct_change:
                     self.commit_event(slct_event, trans)
 

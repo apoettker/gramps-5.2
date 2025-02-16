@@ -42,9 +42,9 @@ from gi.repository import Gtk
 # -------------------------------------------------------------------------
 from gramps.gen.datehandler import displayer, format_time, get_date_valid
 from gramps.gen.display.name import displayer as name_displayer
-from gramps.gen.lib import EventRoleType, FamilyRelType
+from gramps.gen.lib import EventType, EventRoleType, FamilyRelType
 from .flatbasemodel import FlatBaseModel
-from gramps.gen.utils.db import get_marriage_or_fallback
+from gramps.gen.utils.db import get_marriage_or_fallback, get_custom_event_ref
 from gramps.gen.config import config
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 
@@ -75,6 +75,7 @@ class FamilyModel(FlatBaseModel):
             self.column_mother,
             self.column_type,
             self.column_marriage,
+            self.column_wedding,
             self.column_private,
             self.column_tags,
             self.column_change,
@@ -86,6 +87,7 @@ class FamilyModel(FlatBaseModel):
             self.sort_mother,
             self.column_type,
             self.sort_marriage,
+            self.sort_wedding,
             self.column_private,
             self.column_tags,
             self.sort_change,
@@ -110,7 +112,7 @@ class FamilyModel(FlatBaseModel):
         """
         Return the color column.
         """
-        return 8
+        return 9
 
     def on_get_n_columns(self):
         return len(self.fmap) + 1
@@ -195,6 +197,41 @@ class FamilyModel(FlatBaseModel):
             else:
                 value = ""
             self.set_cached_value(handle, "SORT_MARRIAGE", value)
+        return value
+
+    def column_wedding(self, data):
+        handle = data[0]
+        cached, value = self.get_cached_value(handle, "WEDDING")
+        if not cached:
+            family = self.db.get_family_from_handle(data[0])
+            event, __ = get_custom_event_ref\
+                (self.db, family, [EventType.CUSTOM], \
+                 eventtyestring='Trauung', roletypelist=[EventRoleType.FAMILY])
+            if event:
+                if event.date.format:
+                    value = event.date.format % displayer.display(event.date)
+                elif not get_date_valid(event):
+                    value = invalid_date_format % displayer.display(event.date)
+                else:
+                    value = "%s" % displayer.display(event.date)
+            else:
+                value = ""
+            self.set_cached_value(handle, "WEDDING", value)
+        return value
+
+    def sort_wedding(self, data):
+        handle = data[0]
+        cached, value = self.get_cached_value(handle, "SORT_WEDDING")
+        if not cached:
+            family = self.db.get_family_from_handle(data[0])
+            event, __ = get_custom_event_ref\
+                (self.db, family, [EventType.CUSTOM], \
+                 eventtyestring='Trauung', roletypelist=[EventRoleType.FAMILY])
+            if event:
+                value = "%09d" % event.date.get_sort_value()
+            else:
+                value = ""
+            self.set_cached_value(handle, "SORT_WEDDING", value)
         return value
 
     def column_id(self, data):

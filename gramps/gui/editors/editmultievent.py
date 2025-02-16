@@ -46,11 +46,9 @@ from gi.repository import Gtk
 #
 #-------------------------------------------------------------------------
 from gramps.gen.db import DbTxn
-from gramps.gen.lib.date import Date, Today
-
-
-from gramps.gen.lib import Citation, Date, Event, EventType, Media, \
+from gramps.gen.lib import Citation, Event, EventType, Media, MediaRef, \
      Note, Place, PlaceName, Source
+from gramps.gen.lib.date import Today
 
 #-------------------------------------------------------------------------
 #
@@ -170,7 +168,7 @@ class EditMultiEvent:
 
         return note_handle
 
-    def _get_or_create_media(self, medias):
+    def _get_or_create_media_ref(self, medias):
         """Select or creates a new Media called Multiple"""
         if not medias:
             return None
@@ -183,13 +181,18 @@ class EditMultiEvent:
                 media.set_gramps_id("Omult")
                 media.set_description(_("Multiple"))
                 with DbTxn(_("Initiate multiple Media"), self.dbstate) as trans:
-                    self.dbstate.add_object(media, trans)
+                    self.dbstate.add_media(media, trans)
                 self.default_objects['media'] = media.get_handle()
                 media_handle = media.get_handle()
             else:
                 media_handle = media_desc[_("Multiple")]
 
-        return media_handle
+        # due to GalleryTab.__init__.self.callman.register_handles ...
+        media = self.dbstate.get_media_from_handle(media_handle)
+        media_ref = MediaRef()
+        media_ref.set_reference_handle(media.handle)
+
+        return media_ref
 
     def get_events_from_handles(self, handles):
         """"""
@@ -197,7 +200,7 @@ class EditMultiEvent:
             return None
 
         date, place = None, None
-        source, note, media, attribute = None, None, None, None
+        # source, note, media, attribute = None, None, None, None
 
         elements = defaultdict(list)
         for handle in handles:
@@ -216,7 +219,7 @@ class EditMultiEvent:
 
             # Collect all Descriptions
             elements["desc"].append(event.get_description())
-
+            """
             # Collect all Citations
             citation_list = event.get_citation_list()
             if citation_list:
@@ -234,7 +237,7 @@ class EditMultiEvent:
 
             # Collect all Media
             mediaref_list = event.get_media_list()
-            if mediaref_list:
+            if len(mediaref_list) > 1:
                 for mediaref in mediaref_list:
                     elements["media"].append(mediaref.ref)
 
@@ -243,11 +246,12 @@ class EditMultiEvent:
             if attribute_list:
                 for attribute in attribute_list:
                     elements["attribute"].append(attribute.value)
-
+            """
         # Organize results
         for i in elements:
             elements[i].sort()   # Sorts entries
-            elements[i] = list(set(elements[i]))   # Eliminates doubles
+            if i != 'media':
+                elements[i] = list(set(elements[i]))   # Eliminates doubles
 
         # Create new Event with 'multiple' data
         event = Event()
@@ -277,7 +281,7 @@ class EditMultiEvent:
             description = _("Multiple")
         event.set_description(description)
         event.multiple['desc'] = event.description
-
+        """
         # Set (new) Source / Citation
         source_handle = self._get_or_create_source(elements["source"])
         citation_handle = self._get_or_create_citation(source_handle, elements["citation"])
@@ -290,10 +294,10 @@ class EditMultiEvent:
             event.set_note_list([note_handle])
 
         # Set (new) Media
-        media_handle = self._get_or_create_media(elements["media"])
+        media_handle = self._get_or_create_media_ref(elements["media"])
         if media_handle:
-            event.add_media_reference([media_handle])
-
+            event.add_media_reference(media_handle)
+        """
         return event
 
     def clean_objects_from_multiple(self, obj):

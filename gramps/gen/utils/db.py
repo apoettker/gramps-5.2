@@ -183,6 +183,23 @@ def get_event_ref(db, family, event_type):
     return None
 
 
+def get_custom_event_ref(db, objekt, eventtypelist, eventtyestring='', roletypelist=[EventRoleType.PRIMARY]):
+    """
+    Return a event and a reference to a (custom) given event type list of an object.
+    """
+    for event_ref in objekt.get_event_ref_list():
+        event = db.get_event_from_handle(event_ref.ref)
+        if (
+            event
+            and event.type.value in eventtypelist
+            and event_ref.role.value in roletypelist
+        ):
+            if event.type.value == EventType.CUSTOM:
+                if event.type.string != eventtyestring: continue
+            return event, event_ref
+    return None, None
+
+
 def get_primary_event_ref_list(db, family):
     """
     Return a reference to the primary events of the family.

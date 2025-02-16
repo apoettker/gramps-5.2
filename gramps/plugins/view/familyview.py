@@ -74,9 +74,10 @@ class FamilyView(ListView):
     COL_MOTHER = 2
     COL_REL = 3
     COL_MARDATE = 4
-    COL_PRIV = 5
-    COL_TAGS = 6
-    COL_CHAN = 7
+    COL_WEDDDATE = 5
+    COL_PRIV = 6
+    COL_TAGS = 7
+    COL_CHAN = 8
     # column definitions
     COLUMNS = [
         (_("ID"), TEXT, None),
@@ -84,13 +85,14 @@ class FamilyView(ListView):
         (_("Mother"), TEXT, None),
         (_("Relationship"), TEXT, None),
         (_("Marriage Date"), MARKUP, None),
+        (_("Wedding Date"), MARKUP, None),
         (_("Private"), ICON, "gramps-lock"),
         (_("Tags"), TEXT, None),
         (_("Last Changed"), TEXT, None),
     ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (
-        ("columns.visible", [COL_ID, COL_FATHER, COL_MOTHER, COL_REL, COL_MARDATE]),
+        ("columns.visible", [COL_ID, COL_FATHER, COL_MOTHER, COL_MARDATE, COL_WEDDDATE, COL_CHAN]),
         (
             "columns.rank",
             [
@@ -99,12 +101,13 @@ class FamilyView(ListView):
                 COL_MOTHER,
                 COL_REL,
                 COL_MARDATE,
+                COL_WEDDDATE,
                 COL_PRIV,
                 COL_TAGS,
                 COL_CHAN,
             ],
         ),
-        ("columns.size", [75, 200, 200, 100, 100, 40, 100, 100]),
+        ("columns.size", [75, 200, 200, 100, 100, 100, 40, 100, 100]),
     )
 
     ADD_MSG = _("Add a new family")
@@ -415,7 +418,7 @@ class FamilyView(ListView):
         """
         deletes a single object from database
         """
-        family = self.dbstate.db.get_family_from_handle(handle)
+        # family = self.dbstate.db.get_family_from_handle(handle)
         self.dbstate.db.remove_family_relationships(handle, trans)
 
     def edit(self, *obj):
