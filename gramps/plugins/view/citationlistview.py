@@ -3,6 +3,7 @@
 # Copyright (C) 2001-2006  Donald N. Allingham
 # Copyright (C) 2008       Gary Burton
 # Copyright (C) 2011       Tim G L Lyons
+#               2025       Alois Poettker
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -80,7 +81,7 @@ class CitationListView(ListView):
     """
 
     # The data items here have to correspond, in order, to the items in
-    # src/giu/views/treemodels/citationlismodel.py
+    # src/giu/views/treemodels/citationlistmodel.py
     COL_TITLE_PAGE = 0
     COL_ID = 1
     COL_DATE = 2
@@ -144,6 +145,7 @@ class CitationListView(ListView):
     ADD_CITATION_MSG = _("Add a new citation to an existing source")
     EDIT_MSG = _("Edit the selected citation")
     DEL_MSG = _("Delete the selected citation")
+    CLONE_MSG = _("Clone the selected citation")
     MERGE_MSG = _("Merge the selected citations")
     FILTER_TYPE = "Citation"
     QR_CATEGORY = CATEGORY_QR_CITATION
@@ -183,193 +185,220 @@ class CitationListView(ListView):
 
     additional_ui = [
         """
-      <placeholder id="LocalExport">
-        <item>
-          <attribute name="action">win.ExportTab</attribute>
-          <attribute name="label" translatable="yes">Export View...</attribute>
-        </item>
-      </placeholder>
-""",
+        <placeholder id="LocalExport">
+          <item>
+            <attribute name="action">win.ExportTab</attribute>
+            <attribute name="label" translatable="yes">Export View...</attribute>
+          </item>
+        </placeholder>
+        """,
         """
-      <section id="AddEditBook">
-        <item>
-          <attribute name="action">win.AddBook</attribute>
-          <attribute name="label" translatable="yes">_Add Bookmark</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.EditBook</attribute>
-          <attribute name="label" translatable="no">%s...</attribute>
-        </item>
-      </section>
-"""
+        <section id="AddEditBook">
+          <item>
+            <attribute name="action">win.AddBook</attribute>
+            <attribute name="label" translatable="yes">_Add Bookmark</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.EditBook</attribute>
+            <attribute name="label" translatable="no">%s...</attribute>
+          </item>
+        </section>
+        """
         % _("Organize Bookmarks"),
         """
-      <placeholder id="CommonGo">
-      <section>
-        <item>
-          <attribute name="action">win.Back</attribute>
-          <attribute name="label" translatable="yes">_Back</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Forward</attribute>
-          <attribute name="label" translatable="yes">_Forward</attribute>
-        </item>
-      </section>
-      </placeholder>
-""",
+        <placeholder id="CommonGo">
+        <section>
+          <item>
+            <attribute name="action">win.Back</attribute>
+            <attribute name="label" translatable="yes">_Back</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Forward</attribute>
+            <attribute name="label" translatable="yes">_Forward</attribute>
+          </item>
+        </section>
+        </placeholder>
+        """,
         """
-      <section id='CommonEdit' groups='RW'>
-        <item>
-          <attribute name="action">win.Add</attribute>
-          <attribute name="label" translatable="yes">_Add...</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Edit</attribute>
-          <attribute name="label">%s</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Remove</attribute>
-          <attribute name="label" translatable="yes">_Delete</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Merge</attribute>
-          <attribute name="label" translatable="yes">_Merge...</attribute>
-        </item>
-      </section>
-"""
+        <section id='CommonEdit' groups='RW'>
+          <item>
+            <attribute name="action">win.Add</attribute>
+            <attribute name="label" translatable="yes">_Add...</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Edit</attribute>
+            <attribute name="label">%s</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Remove</attribute>
+            <attribute name="label" translatable="yes">_Delete</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Clone</attribute>
+            <attribute name="label" translatable="yes">_Clone...</attribute>
+          </item>
+          <item>
+            <attribute name="action">win.Merge</attribute>
+            <attribute name="label" translatable="yes">_Merge...</attribute>
+          </item>
+        </section>
+        """
         % _("_Edit...", "action"),  # to use sgettext()
         """
         <placeholder id='otheredit'>
-        <item>
-          <attribute name="action">win.FilterEdit</attribute>
-          <attribute name="label" translatable="yes">"""
-        """Citation Filter Editor</attribute>
-        </item>
+          <item>
+            <attribute name="action">win.FilterEdit</attribute>
+            <attribute name="label" translatable="yes">"""
+            """Citation Filter Editor</attribute>
+          </item>
         </placeholder>
-""",  # Following are the Toolbar items
+        """,  # Following are the Toolbar items
         """
-    <placeholder id='CommonNavigation'>
-    <child groups='RO'>
-      <object class="GtkToolButton">
-        <property name="icon-name">go-previous</property>
-        <property name="action-name">win.Back</property>
-        <property name="tooltip_text" translatable="yes">"""
-        """Go to the previous object in the history</property>
-        <property name="label" translatable="yes">_Back</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RO'>
-      <object class="GtkToolButton">
-        <property name="icon-name">go-next</property>
-        <property name="action-name">win.Forward</property>
-        <property name="tooltip_text" translatable="yes">"""
-        """Go to the next object in the history</property>
-        <property name="label" translatable="yes">_Forward</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    </placeholder>
-""",
-        """
-    <placeholder id='BarCommonEdit'>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">list-add</property>
-        <property name="action-name">win.Add</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">_Add...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">gtk-edit</property>
-        <property name="action-name">win.Edit</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">Edit...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">list-remove</property>
-        <property name="action-name">win.Remove</property>
-        <property name="tooltip_text">%s</property>
-        <property name="label" translatable="yes">_Delete</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    <child groups='RW'>
-      <object class="GtkToolButton">
-        <property name="icon-name">gramps-merge</property>
-        <property name="action-name">win.Merge</property>
-        <property name="tooltip_text" >%s</property>
-        <property name="label" translatable="yes">_Merge...</property>
-        <property name="use-underline">True</property>
-      </object>
-      <packing>
-        <property name="homogeneous">False</property>
-      </packing>
-    </child>
-    </placeholder>
-"""
-        % (ADD_MSG, EDIT_MSG, DEL_MSG, MERGE_MSG),
-        """
-    <menu id="Popup">
-      <section>
-        <item>
-          <attribute name="action">win.Back</attribute>
-          <attribute name="label" translatable="yes">_Back</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Forward</attribute>
-          <attribute name="label" translatable="yes">Forward</attribute>
-        </item>
-      </section>
-      <section id="PopUpTree">
-      </section>
-      <section>
-        <item>
-          <attribute name="action">win.Add</attribute>
-          <attribute name="label" translatable="yes">_Add...</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Edit</attribute>
-          <attribute name="label">%s</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Remove</attribute>
-          <attribute name="label" translatable="yes">_Delete</attribute>
-        </item>
-        <item>
-          <attribute name="action">win.Merge</attribute>
-          <attribute name="label" translatable="yes">_Merge...</attribute>
-        </item>
-      </section>
-      <section>
-        <placeholder id='QuickReport'>
+        <placeholder id='CommonNavigation'>
+          <child groups='RO'>
+          <object class="GtkToolButton">
+            <property name="icon-name">go-previous</property>
+            <property name="action-name">win.Back</property>
+            <property name="tooltip_text" translatable="yes">"""
+            """Go to the previous object in the history</property>
+            <property name="label" translatable="yes">_Back</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
+        <child groups='RO'>
+          <object class="GtkToolButton">
+            <property name="icon-name">go-next</property>
+            <property name="action-name">win.Forward</property>
+            <property name="tooltip_text" translatable="yes">"""
+            """Go to the next object in the history</property>
+            <property name="label" translatable="yes">_Forward</property>
+            <property name="use-underline">True</property>
+          </object>
+          <packing>
+            <property name="homogeneous">False</property>
+          </packing>
+        </child>
         </placeholder>
-      </section>
-    </menu>
-"""
+        """,
+        """
+        <placeholder id='BarCommonEdit'>
+          <child groups='RW'>
+            <object class="GtkToolButton">
+              <property name="icon-name">list-add</property>
+              <property name="action-name">win.Add</property>
+              <property name="tooltip_text">%s</property>
+              <property name="label" translatable="yes">_Add...</property>
+              <property name="use-underline">True</property>
+            </object>
+            <packing>
+              <property name="homogeneous">False</property>
+            </packing>
+          </child>
+          <child groups='RW'>
+            <object class="GtkToolButton">
+              <property name="icon-name">gtk-edit</property>
+              <property name="action-name">win.Edit</property>
+              <property name="tooltip_text">%s</property>
+              <property name="label" translatable="yes">Edit...</property>
+              <property name="use-underline">True</property>
+            </object>
+            <packing>
+              <property name="homogeneous">False</property>
+            </packing>
+          </child>
+          <child groups='RW'>
+            <object class="GtkToolButton">
+              <property name="icon-name">list-remove</property>
+              <property name="action-name">win.Remove</property>
+              <property name="tooltip_text">%s</property>
+              <property name="label" translatable="yes">_Delete</property>
+              <property name="use-underline">True</property>
+            </object>
+            <packing>
+              <property name="homogeneous">False</property>
+            </packing>
+          </child>
+          <child groups='RW'>
+            <object class="GtkToolButton">
+              <property name="icon-name">gramps-clone</property>
+              <property name="action-name">win.Clone</property>
+              <property name="tooltip_text" >%s</property>
+              <property name="label" translatable="yes">_Clone...</property>
+              <property name="use-underline">True</property>
+            </object>
+            <packing>
+              <property name="homogeneous">False</property>
+            </packing>
+          </child>
+          <child groups='RW'>
+            <object class="GtkToolButton">
+              <property name="icon-name">gramps-merge</property>
+              <property name="action-name">win.Merge</property>
+              <property name="tooltip_text" >%s</property>
+              <property name="label" translatable="yes">_Merge...</property>
+              <property name="use-underline">True</property>
+            </object>
+            <packing>
+              <property name="homogeneous">False</property>
+            </packing>
+          </child>
+        </placeholder>
+        """
+        % (ADD_MSG, EDIT_MSG, DEL_MSG, CLONE_MSG, MERGE_MSG),
+        """
+        <menu id="Popup">
+          <section>
+            <item>
+              <attribute name="action">win.Back</attribute>
+              <attribute name="label" translatable="yes">_Back</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Forward</attribute>
+              <attribute name="label" translatable="yes">Forward</attribute>
+            </item>
+          </section>
+          <section id="PopUpTree">
+          </section>
+          <section>
+            <item>
+              <attribute name="action">win.Add</attribute>
+              <attribute name="label" translatable="yes">_Add...</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Edit</attribute>
+              <attribute name="label">%s</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Remove</attribute>
+              <attribute name="label" translatable="yes">_Delete</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Clone</attribute>
+              <attribute name="label" translatable="yes">_Clone...</attribute>
+            </item>
+            <item>
+              <attribute name="action">win.Merge</attribute>
+              <attribute name="label" translatable="yes">_Merge...</attribute>
+            </item>
+          </section>
+          <section>
+            <placeholder id='QuickReport'>
+            </placeholder>
+          </section>
+        </menu>
+        """
         % _("_Edit...", "action"),  # to use sgettext()
     ]
+
+    def define_actions(self):
+        """
+        overwrite ListView.define_actions and add clone action
+        """
+        ListView.define_actions(self)
+        self.edit_action.add_actions([("Clone", self.clone)])
 
     def add(self, *obj):
         """
@@ -420,6 +449,27 @@ class CitationListView(ListView):
             "the same citation is being edited.\n\nTo edit this "
             "citation, you need to close the object."
         )
+
+    def clone(self, *obj):
+        """
+        Clones the selected citation.
+        """
+        citation_list = self.selected_handles()
+
+        if len(citation_list) != 1:
+            msg = _("Cannot clone citation object.")
+            msg2 = _("Exactly one citation must be selected to perform a clone.")
+            ErrorDialog(msg, msg2, parent=self.uistate.window)
+        else:
+            source_citation = self.dbstate.db.get_citation_from_handle(citation_list[0])
+            citation = Citation(source=source_citation)
+            citation.handle, citation.gramps_id = None, None
+
+            try:
+                self.uistate.action = 'Citation-Clone'
+                EditCitation(self.dbstate, self.uistate, [], citation)
+            except WindowActiveError:
+                pass
 
     def merge(self, *obj):
         """
@@ -498,7 +548,11 @@ class CitationListView(ListView):
         """
         return (
             ("Citation Filter",),
-            ("Citation Gallery", "Citation Notes", "Citation Backlinks"),
+            (
+                "Citation Gallery",
+                "Citation Notes",
+                "Citation Backlinks"
+            ),
         )
 
     def get_config_name(self):

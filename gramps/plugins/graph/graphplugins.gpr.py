@@ -92,3 +92,24 @@ plg.category = CATEGORY_GRAPHVIZ
 plg.reportclass = "RelGraphReport"
 plg.optionclass = "RelGraphOptions"
 plg.report_modes = [REPORT_MODE_GUI, REPORT_MODE_CLI]
+
+# ------------------------------------------------------------------------
+#
+# Relations Graph
+#
+# ------------------------------------------------------------------------
+
+plg = newplugin()
+plg.id = "relations_graph"
+plg.name = _("Relations Graph")
+plg.description = _("Produces relations graphs using Graphviz.")
+plg.version = "1.0"
+plg.gramps_target_version = MODULE_VERSION
+plg.status = STABLE
+plg.fname = "relationsgraph.py"
+plg.ptype = REPORT
+plg.category = CATEGORY_GRAPHVIZ
+plg.reportclass = "RelationsGraph"
+plg.optionclass = "RelationsGraphOptions"
+plg.report_modes = [REPORT_MODE_GUI, REPORT_MODE_CLI]
+plg.require_active = False

@@ -326,8 +326,9 @@ class EditEvent(EditPrimary):
             return
 
         if self.action in ['Add', 'Clone']:   # Add / Clone event
-            with DbTxn(_("%s Event (%s)") % (self.action, self.obj.get_gramps_id()),
-                       self.db) as trans:
+            with DbTxn(
+                _("%s Event (%s)") % (self.action, self.obj.get_gramps_id()), self.db
+            ) as trans:
                 self.db.add_event(self.obj, trans)
         elif self.action == 'MultiEdit':   # Multiedit event
             self.save_multiple()
