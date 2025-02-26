@@ -84,7 +84,8 @@ WIKI_HELP_SEC = _("New_Event_dialog", "manual")
 # -------------------------------------------------------------------------
 class EditEvent(EditPrimary):
     def __init__(self, dbstate, uistate, track, event, callback=None):
-        self.action = uistate.action.split('-')[1]
+        self.action = uistate.action.split('-')[1] \
+            if hasattr(uistate, 'action') else 'Init'
 
         EditPrimary.__init__(
             self,

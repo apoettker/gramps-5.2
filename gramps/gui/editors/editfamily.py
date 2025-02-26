@@ -550,6 +550,10 @@ class EditFamily(EditPrimary):
             from db.
         2. Changes in other families are of no consequence to the family shown
         """
+        # no warning messages due to a regular:
+        if self.event_list.action == 'Event-Merge':
+            return
+
         if self.obj.get_handle() in handles:
             # rebuild data
             ## Todo: Gallery and note tab are not rebuild ??

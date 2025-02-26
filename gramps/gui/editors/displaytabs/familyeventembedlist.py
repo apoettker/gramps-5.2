@@ -63,6 +63,7 @@ class FamilyEventEmbedList(EventEmbedList):
         family = self.dbstate.db.get_family_from_gramps_id(self.obj.gramps_id)
         if family:
             self.changed = True
+            self.action = 'Event-Merge'
             event_ref_list = [event_ref.ref for event_ref in family.event_ref_list]
 
             selected0_ref = self.selected_list[0][1].ref
@@ -89,7 +90,6 @@ class FamilyEventEmbedList(EventEmbedList):
                                    self.dbstate.db) as trans:
                         self.dbstate.db.commit_family(family, trans)
 
-            self.action = 'Event-Merge'
             from ...merge import MergeEvent
             MergeEvent(self.dbstate, self.uistate, self.track, \
                            selected0_ref, selected1_ref)

@@ -225,6 +225,7 @@ class PersonEventEmbedList(EventEmbedList):
 
         person = self.dbstate.db.get_person_from_gramps_id(self.obj.gramps_id)
         if person:
+            self.action = 'Event-Merge'
             self.changed = True
             event_ref_list = [event_ref.ref for event_ref in person.event_ref_list]
 
@@ -252,7 +253,6 @@ class PersonEventEmbedList(EventEmbedList):
                                self.dbstate.db) as trans:
                         self.dbstate.db.commit_person(person, trans)
 
-            self.action = 'Event-Merge'
             from ...merge import MergeEvent
             MergeEvent(self.dbstate, self.uistate, self.track, \
                        selected0_ref, selected1_ref)
