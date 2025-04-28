@@ -1,5 +1,5 @@
 """
-Family Lines, a Graphviz-based plugin for Gramps.
+Relations Graph, a Graphviz-based plugin for Gramps.
 """
 
 #------------------------------------------------------------------------
@@ -42,19 +42,16 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 
 from gramps.gen.db import DbTxn
-from gramps.gen.lib import EventRoleType, EventType, Person, Date
+from gramps.gen.lib import AttributeType, EventRoleType, EventType, Person, Date
 from gramps.gen.utils.file import media_path_full
-from gramps.gen.utils.thumbnails import (SIZE_NORMAL, SIZE_LARGE)   # get_thumbnail_path,
 from gramps.gen.plug.report import Report
 from gramps.gen.plug.report import utils
 from gramps.gen.plug.report import MenuReportOptions
 from gramps.gen.plug.report import stdoptions
 from gramps.gen.plug.menu import (StringOption)
 from gramps.gen.utils.db import get_birth_or_fallback, get_death_or_fallback
-from gramps.gen.utils.location import get_location_list
 from gramps.gen.proxy import CacheProxyDb
 from gramps.gen.errors import ReportError
-# from gramps.gen.display.place import displayer as _pd
 
 from gramps.plugins.libAP.libbase import *
 from gramps.plugins.libAP.libcolor import Color
@@ -162,14 +159,14 @@ class RelationsGraph(Report):
         options      - instance of the RelationsGraphOptions class for this report
         user         - a gen.user.User() instancesetup_style_frame
         """
+        self.database = CacheProxyDb(database)
+        self.user = user
+
         self.default_dataset()
         self.read_dataset(options)
 
         Report.__init__(self, database, options, user)
-        self.database = CacheProxyDb(database)
-        self.user = user
-        if not keys_true(self.multiple, "enable"):
-            self._local_graph_doc_init()
+        self._local_graph_doc_init()
 
     def _local_graph_doc_init(self):
         """"""
@@ -189,6 +186,8 @@ class RelationsGraph(Report):
                 if key == 'ratio': self.doc.ratio = self.dot[key]
                 if key == 'sizew': self.doc.sizew = float(self.dot[key])
                 if key == 'sizeh': self.doc.sizeh = float(self.dot[key])
+                if key == 'xmargin': self.doc.xmargin = float(self.dot[key])
+                if key == 'ymargin': self.doc.ymargin = float(self.dot[key])
                 if key == 'spline': self.doc.spline = self.dot[key]
 
         # ource file will be copied to target directory as backup (graphdoc.py)
@@ -238,6 +237,7 @@ class RelationsGraph(Report):
                     self.people[father.gramps_id] = {
                         'type': value["type"], 'PID': father.gramps_id ,
                         'handle': father_handle, 'spouse': False,
+                        'sort': self.get_birthyear(father),
                         'EoL': False, 'XDNA': {}
                     }
                 mother_handle = family.get_mother_handle()
@@ -248,6 +248,7 @@ class RelationsGraph(Report):
                     self.people[mother.gramps_id] = {
                         'type': value['type'], 'PID': mother.gramps_id ,
                         'handle': mother_handle, 'spouse': True,
+                        'sort': self.get_birthyear(mother),
                         'EoL': False, 'XDNA': {}
                     }
 
@@ -322,19 +323,23 @@ class RelationsGraph(Report):
 
             "ancestor": {"enable": False,
                          "color": False,
+                         "certificate": {"enable": False},
                          "images": {"enable": False, "exist": False, "onside": True},
                         },
             "ancestorspouse": {"enable": False,
                                "color": False,
+                               "certificate": {"enable": False},
                                "images": {"enable": False, "exist": False, "onside": True}
                               },
             "ancestorspouseparents": {"enable": False,
                                "color": False,
+                               "certificate": {"enable": False},
                                "childscount": False,
                                "images": {"enable": False, "exist": False, "onside": True}
                               },
             "ancestorfamily": {"enable": False,
                                "color": False,
+                               "certificate": {"enable": False},
                                "civil": False, "church": False, "line": False,
                                "childscount": False
                                },
@@ -346,41 +351,47 @@ class RelationsGraph(Report):
 
             "proband": {"enable": False,
                          "color": False,
+                         "certificate": {"enable": False},
                          "images": {"enable": False, "exist": False, "onside": True},
                         },
             "probandspouse": {"enable": False,
                               "color": False,
+                              "certificate": {"enable": False},
                               "images": {"enable": False, "exist": False, "onside": True}
                              },
             "probandspouseparents": {"enable": False,
                               "color": False,
+                              "certificate": {"enable": False},
                               "childscount": False,
                               "images": {"enable": False, "exist": False, "onside": True}
                              },
             "probandfamily": {"enable": False,
                               "color": False,
+                              "certificate": {"enable": False},
                               "civil": False, "church": False, "line": False,
                               "childscount": False
                              },
 
             "descendant": {"enable": False,
                            "color": False,
+                           "certificate": {"enable": False},
                            "uncolorlist": [],
                            "images": {"enable": False, "exist": False, "onside": True},
                           },
             "descendantspouse": {"enable": False,
-                                 "color": False,
-                                 "uncolorlist": [],
+                                 "color": False, "uncolorlist": [],
+                                 "certificate": {"enable": False},
                                  "childscount": False,
                                  "images": {"enable": False, "exist": False, "onside": True}
                                 },
             "descendantspouseparents": {"enable": False,
-                                 "color": False,
-                                 "uncolorlist": [],
+                                 "color": False, "uncolorlist": [],
+                                 "certificate": {"enable": False},
                                  "images": {"enable": False, "exist": False, "onside": True}
                                 },
             "descendantfamily": {"enable": False,
                                  "color": False,
+                                 "certificate": {"enable": False},
                                  "civil": False, "church": False, "line": False,
                                  "childscount": False
                                 },
@@ -581,6 +592,7 @@ class RelationsGraph(Report):
         self._edge = {
             "arrowheadstyle": "normal",
             "arrowtailstyle": "none",
+            "penwidth": 2,
             "minlen": 2
         }
 
@@ -626,9 +638,19 @@ class RelationsGraph(Report):
 
         return None
 
-
     def default_dataset(self):
         """"""
+        self.masterbase = {}
+        self._masterbase = {
+            "path": "",
+            "databasefile": "",
+            "sourcefile": "",
+            "targetfile": "",
+            "analyzefile": "",
+            "addendumfile": "",
+            "note": ""
+        }
+
         self.multiple = {
             "enable": False   # Korrekt!
         }
@@ -653,24 +675,16 @@ class RelationsGraph(Report):
             file_name = options.options_dict['data_set']
             if file_name[-3:] != ".js": file_name += ".js"
             with open(file_name, 'r') as self.data_handle:
-                dataset = json.load(self.data_handle)
+                masterdataset = json.load(self.data_handle)
 
-        {setattr(self, key, value) for (key, value) in dataset.items()}
+        {setattr(self, key, value) for (key, value) in masterdataset.items()}
 
-        if 'multiple' in dataset:
+        if keys_true(masterdataset, "multiple") and keys_true(self.multiple, "enable"):
             self.multiple = {**self._multiple, **self.multiple}
-            if not self.base['path']:
+            if not self.masterbase['path']:
                 raise ReportError(_('No base path'), _('You have to define a base path'))
-            if not self.base['sourcefile']:
-                raise ReportError(_('No sourcefile'), _('You have to define a filename'))
-            else:
-                self.multiple['sourcefile'] = self.base['path'] + '/' + self.base['sourcefile']
-            if keys_true(self.base, 'analyzefile'):
-                self.multiple['analyzefile'] = self.base['path'] + '/' + self.base['analyzefile']
-
-            return None
-
-        self.local_read_dataset(options, dataset)
+        else:
+            self.local_read_dataset(options, masterdataset)
 
         return None
 
@@ -680,7 +694,7 @@ class RelationsGraph(Report):
         with open(file_name, 'w') as file_handle:
             file_handle.write(json.dumps(objekt, indent=2))
 
-    def local_begin_report(self):
+    def begin_report(self):
         """
         Inherited method; called by report() in _ReportDialog.py
 
@@ -757,7 +771,7 @@ class RelationsGraph(Report):
             self.addendum_handle.write("\nEnd\n")
             self.addendum_handle.close()
 
-    def local_write_report(self):
+    def write_report(self):
         """
         Inherited method; called by report() in _ReportDialog.py
         """
@@ -805,33 +819,191 @@ class RelationsGraph(Report):
         if self.base["chart"].capitalize() == 'Legend':
             self.add_legend()
 
-    def begin_report(self):
-        """"""
-        if not keys_true(self.multiple, "enable"):
-            pass
-
-        self.local_begin_report()
-
-    def write_report(self):
-        """"""
-        if not keys_true(self.multiple, "enable"):
-            pass
-
-        self.local_write_report()
 
     # ==========================================================================================================================
-
-    def get_birthdate(self, person):
+    def get_birthyear(self, person):
         """"""
-        birth_date = ''
+        birth_year = -1
         birth_event = get_birth_or_fallback(self.database, person)
         if birth_event:
             date = birth_event.get_date_object()
             if date.get_year_valid():
-                birth_date = self._get_date(Date(date.get_year()))
+                birth_year = date.get_year()
 
-        return birth_date
+        return birth_year
 
+    def get_mod_date(self, dateobj):
+        """"""
+        date = self._get_date(Date(dateobj.get_year()))
+        modifier = dateobj.get_modifier()
+        match modifier:
+            case Date.MOD_BEFORE:
+                date = '\u21a4' + date
+            case Date.MOD_AFTER:
+                date += '\u21a6'
+            case Date.MOD_ABOUT:
+                date = '~' + date
+            case Date.MOD_RANGE:
+                date += ' \u2194 %s' % dateobj.get_high_year()
+            case Date.MOD_SPAN:
+                date += ' \u2194 %s' % dateobj.get_high_year()
+            case _: None
+
+        return date
+
+    def get_cert_date_bak(self, objekt):
+        """"""
+        cert_label = ''
+        roletype = EventRoleType.PRIMARY if isinstance(objekt, Person) else EventRoleType.FAMILY
+        cert_event_list, __ = find_specific_event \
+            (self.database, objekt, [EventType.CUSTOM], eventtypestring='Nennung', \
+             roletypelist=[roletype], mode='M')
+        if cert_event_list:
+            cert_date_dict = {}
+            for cert_event in cert_event_list:
+                cert_date, cert_moddate, __, __ = self.get_date_place(cert_event, True, False)
+                if cert_date:
+                    if isinstance(cert_date, list):
+                        for d, dte in enumerate(cert_date):
+                            cert_date_dict[dte] = cert_moddate[d]
+                    else:
+                        cert_date_dict[cert_date] = cert_moddate
+            if cert_date_dict:
+                cert_date_list = sorted(cert_date_dict.items())
+                cert_label = '{'
+                cert_label += '%s' % cert_date_list[0][1]
+                if len(cert_date_dict) > 1:
+                    cert_label += ' \u2015 %s' % cert_date_list[-1][1]
+                cert_label += '}'
+
+        return cert_label
+
+    def get_cert_date(self, objekt):
+        """
+        Return certification row for obj (person or family).
+        """
+        def find_specific_event(objekt, eventtypelist, eventtypestring=[], \
+                                    roletypelist=[EventRoleType.PRIMARY]):
+            """ Find a object specific events """
+            if not objekt: return None
+
+            def check_attribute(attributelist):
+                """ Check if 'Cite' attribute """
+                for attr in attributelist:
+                    if attr.type.value == AttributeType.CUSTOM:
+                        # code not phytonic, but fast!
+                        if attr.type.string == 'Cite' and \
+                               ' - ' in attr.value: return True
+                        elif attr.type.string == 'Confidence' and \
+                                 attr.value == 'Sehr hoch': return True
+                return False
+
+            def check_citation(citationlist):
+                """ Check if 'Register' citation """
+                for cit_handle in citationlist:
+                    cit = self.database.get_citation_from_handle(cit_handle)
+                    if cit and 'register' in cit.page: return True
+                    elif cit.source_handle:
+                        src = self.database.get_source_from_handle(cit.source_handle)
+                        if src and check_attribute(src.attribute_list): return True
+                return False
+
+            event_list = []
+            for evt_ref in objekt.get_event_ref_list():
+                evt = self.database.get_event_from_handle(evt_ref.ref)
+                if evt and evt.type.value in eventtypelist and \
+                       evt_ref.role.value in roletypelist:
+                    if evt.type.value == EventType.CUSTOM:
+                        if not (evt.type.string in eventtypestring): continue
+                        if not (check_attribute(evt.attribute_list) or \
+                                    check_citation(evt.citation_list)): continue
+                    else:
+                        if not (check_attribute(evt.attribute_list) or \
+                                    check_citation(evt.citation_list)): continue
+                        a = 1
+                    event_list.append(evt)
+            return event_list
+
+        roletype = EventRoleType.PRIMARY if isinstance(objekt, Person) else EventRoleType.FAMILY
+        eventtype_list = [EventType.BIRTH, EventType.CHRISTEN, EventType.OCCUPATION, EventType.PROPERTY, EventType.DEATH, EventType.BURIAL, EventType.CUSTOM]
+        event_list = find_specific_event (objekt, eventtype_list, \
+             eventtypestring=['Belehnung', 'Nennung', 'Personenstand'], \
+             roletypelist=[EventRoleType.UNKNOWN, roletype])
+
+        cert_label = ''
+        if event_list:
+            date_dict = {}
+            for event in event_list:
+                cert_date, cert_moddate, __, __ = self.get_date_place(event, True, False)
+                if cert_date:
+                    if isinstance(cert_date, list):
+                        for d, dte in enumerate(cert_date):
+                            date_dict[dte] = cert_moddate[d]
+                    else:
+                        date_dict[cert_date] = cert_moddate
+
+            if date_dict:
+                low_year, high_year = 0, 0
+                count_label, cert_label = 0, 'urk. '
+                for count, item in enumerate(sorted(date_dict.items())):
+                    if len(cert_label) > 6: cert_label += ', '
+                    count_label += 2 if '\u2194' in item[1] else 1
+                    if count_label % 5 == 0 and count < len(date_dict):
+                        cert_label = cert_label[:-1] + '<BR/>'
+
+                    if '\u2194' in item[1]:
+                        # date_str = item[1].split('\u2194')
+                        # low_year = int(date_str[0].strip())
+                        # high_year = int(date_str[1].strip())
+                        # cert_label += '%s-%s' % (date_str[0].strip(), date_str[1].strip())
+                        cert_label += item[1].replace(' ', '').strip()
+                    else:
+                        low_year = int(item[0])
+                        if low_year > high_year:
+                            cert_label += item[0]
+
+        return cert_label
+
+    def get_date_place(self, event, denable=False, penable=False):
+        date, mod_date, place, unknown = '', '', '', False
+        # get the date
+        if denable:   # Date enable?
+            date_obj = event.get_date_object()
+            if self.diagram['dates']['onlyyears']:
+                if date_obj.get_year_valid():   # localized year
+                    date = self._get_date(Date(date_obj.get_year()))
+                    mod_date = self.get_mod_date(date_obj)
+                else:
+                    if date_obj.modifier == 6:   # text modifier
+                        date, mod_date = [], []
+                        date_list = re.split(r';|,|&\s', date_obj.text)
+                        for dte in date_list:
+                            if not('-' in dte):
+                                dte_str = mod_str = dte
+                            else:
+                                dte_str = dte.split('-')[0].strip()
+                                mod_str = dte.replace('-', ' \u2194 ')
+                            date.append(dte_str)
+                            mod_date.append(mod_str)
+            else:
+                date = mod_date = self._get_date(date_obj)
+
+        # get event place (one of: hamlet, village, town, city, parish,
+        # county, province, region, state or country)
+        if penable:   # Place enable?
+            place_type, place = get_event_place(self.database, event, True)
+            if event.note_list:
+                event_notelist = event.get_note_list()
+                for handle in event_notelist:
+                    note = self.database.get_note_from_handle(handle)
+                    unknown |= 'nicht sicher' in note.get_styledtext().string
+            if place_type == 'Krankenhaus':
+                place = place.split(', ')[0] \
+                    if self.diagram['places']['extended'] else place.split(', ')[1]
+
+        return date, mod_date, place, unknown
+
+    # ==========================================================================================================================
     def find_spouse_parents(self, spouse, generation):
         """"""
         for spouseparents_handle in spouse.get_parent_family_handle_list():
@@ -840,6 +1012,9 @@ class RelationsGraph(Report):
                 if spouseparents.gramps_id in self.include['unfidlist']: continue
                 if not spouseparents.gramps_id in self.families:
                     self.families[spouseparents.gramps_id] = {}
+
+                if spouseparents.gramps_id == 'F5840':
+                    a = 1
 
                 self.generation[spouseparents.gramps_id] = generation + 0.5
                 self.families[spouseparents.gramps_id] = {'mode': 'N', 'type': 'SP', 'handle': spouseparents_handle}
@@ -851,7 +1026,7 @@ class RelationsGraph(Report):
                     self.parents[spousefather.gramps_id] = {'type': 'SP', 'PID': spousefather.gramps_id,
                                          'KekuleNo': '', 'XDNA': {}, 'EoL': True,
                                          'spouse': False, 'handle': spousefather_handle,
-                                         'sort': self.get_birthdate(spousefather)}
+                                         'sort': self.get_birthyear(spousefather)}
 
                 spousemother_handle = spouseparents.get_mother_handle()
                 if spousemother_handle:
@@ -860,10 +1035,9 @@ class RelationsGraph(Report):
                     self.parents[spousemother.gramps_id] = {'type': 'SP', 'PID': spousemother.gramps_id,
                                          'KekuleNo': '', 'XDNA': {}, 'EoL': True,
                                          'spouse': False, 'handle': spousemother_handle,
-                                         'sort': self.get_birthdate(spousemother)}
+                                         'sort': self.get_birthyear(spousemother)}
 
     def _apply_parents(self, handle, base, index):
-
         # if we have a limit on the generations of parents, and we've reached
         # that limit, then don't attempt to find any more ancestors
         if (not handle) or (index >= 2**(self.max_generation +1)):
@@ -893,7 +1067,7 @@ class RelationsGraph(Report):
             self.generation[pc_str] += 1
             self.parents[pid] = {'type': 'A', 'PID': pid, 'handle': handle,
                                  'KekuleNo': index, 'XDNA': {}, 'spouse': False,
-                                 'sort': self.get_birthdate(person)}
+                                 'sort': self.get_birthyear(person)}
             self.parents[pid]['base'] = base
             self.parents[pid]['EoL'] = False if 'N.N.' in ord_name.shortname else True
             nxG.add_node(person.gramps_id)
@@ -921,6 +1095,9 @@ class RelationsGraph(Report):
                 family_id = family.gramps_id
                 if family_id in self.include['unfidlist']: continue
 
+                if family_id == 'F2018': # 'F1737':
+                    a = 1
+
                 # Family between parents and children generation
                 self.generation[family_id] = gen_no + 0.5
 
@@ -937,7 +1114,7 @@ class RelationsGraph(Report):
                        spouse_id not in self.parents:
                         self.generation[pc_str] += 1
                         self.parents[spouse_id] = {'type': 'A', 'PID': spouse_id, 'handle': spouse_handle,
-                                                   'sort': self.get_birthdate(spouse)}
+                                                   'sort': self.get_birthyear(spouse)}
                         if index == 1:
                             self.parents[spouse_id]['type'] = 'P'
 
@@ -1028,7 +1205,7 @@ class RelationsGraph(Report):
         if not (gen_str in self.generation):
             self.generation[gen_str] = 0
 
-        if pid == 'I06789':
+        if pid == 'I20435':
             a = 1
 
         # remember this person!
@@ -1040,7 +1217,7 @@ class RelationsGraph(Report):
             self.childrenCounter += 1
             child_data = {'type': 'D', 'HenryNo': [], 'handle': handle,
                           'spouse': False, 'XDNA': {}, 'VG': default_VG,
-                          'sort': self.get_birthdate(person)}
+                          'sort': self.get_birthyear(person)}
             child_data['HenryNo'].append(henryno)
             self.children[pid] = child_data
 
@@ -1077,6 +1254,9 @@ class RelationsGraph(Report):
             family = self.database.get_family_from_handle(family_handle)
             family_id = family.gramps_id
             if family_id in self.include['unfidlist']: continue
+
+            if family_id == 'F5840': # 'F1737':
+                a = 1
 
             nxG.add_node(family_id)   # fill nxG nodes ...
             nxG.add_edge(pid, family_id)   # fill nxG edges ...
@@ -1116,13 +1296,13 @@ class RelationsGraph(Report):
 
                 if spouse_id not in self.children:
                     self.children[spouse_id] = {'type': 'D', 'HenryNo': [], 'handle': spouse_handle,
-                                                'spouse': True, 'sort': self.get_birthdate(person)}
+                                                'spouse': True, 'sort': self.get_birthyear(person)}
                     self.generation[spouse_id] = gen_no
 
                     if family_id not in self.families:
                         self.families[family_id ] = {'mode': 'N', 'type': 'D', 'handle': family_handle}
 
-                    if self.maxchildren_generation <= gen_no and \
+                    if self.maxchildren_generation >= generation and \
                        self.include['descendantspouseparents']['enable']:
                         self.find_spouse_parents(spouse, gen_no -1)
 
@@ -1361,7 +1541,7 @@ class RelationsGraph(Report):
                 try:
                     edgeNX = list(nx.all_simple_edge_paths(nxG, \
                         source=pathes[path]['source_id'], target=pathes[path]['target_id'], \
-                        cutoff=pathes["cutoff"]))
+                        cutoff=pathes['cutoff']))
                 except nx.NodeNotFound:
                     print('  Node(s) not found: %s -> %s' % (pathes[path]['source_id'], pathes[path]['target_id']))
                     if self.base['analyzefile']:
@@ -1895,7 +2075,7 @@ class RelationsGraph(Report):
                     __, __, father_name, __, __, mother_name = get_name_from_gramps_id(self.database, family_id)
                     event, __ = find_specific_event \
                         (self.database, family, [EventType.CUSTOM, EventType.MARRIAGE], \
-                         eventtyestring='Trauung', roletypelist=[EventRoleType.FAMILY])
+                         eventtypestring='Trauung', roletypelist=[EventRoleType.FAMILY])
                     year = event.date.get_year() if event else ''
                     if item_num == 0:
                         gramps0_id = family.gramps_id
@@ -1981,6 +2161,35 @@ class RelationsGraph(Report):
         if target['shape'] == 'point': target['label'] = ''
 
         return None
+
+    def check_keys(self, pid, *keys):
+        result = False
+        if not self.people[pid]['spouse']:
+            if self.people[pid]['type'] == 'A':
+                result |= self.include['ancestor']['enable'] and keys_true(self.include, 'ancestor', keys) and \
+                    not pid in self.color['ancestor']['uncolorlist']
+            if self.people[pid]['type'] == 'P':
+                result |= self.include['proband']['enable'] and keys_true(self.include, 'proband', keys) and \
+                    not pid in self.color['proband']['uncolorlist']
+            if self.people[pid]['type'] == 'D':
+                result |= self.include['descendant']['enable'] and keys_true(self.include, 'descendant', keys) and \
+                    not pid in self.color['descendant']['uncolorlist']
+            if self.people[pid]['type'] == 'SP':
+                result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
+        else:
+            if self.people[pid]['type'] == 'A':
+                result |= self.include['ancestorspouse']['enable'] and keys_true(self.include, 'ancestorspouse', keys) and \
+                    not pid in self.color['ancestor']['uncolorlist']
+            if self.people[pid]['type'] == 'P':
+                result |= self.include['probandspouse']['enable'] and keys_true(self.include, 'probandspouse', keys) and \
+                    not pid in self.color['proband']['uncolorlist']
+            if self.people[pid]['type'] == 'D':
+                result |= self.include['descendantspouse']['enable'] and keys_true(self.include, 'descendantspouse', keys) and \
+                    not pid in self.color['descendant']['uncolorlist']
+            if self.people[pid]['type'] == 'SP':
+                result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
+
+        return result
 
     def update_image_start(self, objekt, node):
         """"""
@@ -2173,81 +2382,82 @@ class RelationsGraph(Report):
                 node['label'] += lbl
                 if node['htmloutput']: node['label'] += self.diagram['number']['HenryNo-markstop']
 
-        def get_date_place(event):
-            date, place, unknown = '', '', False
-            # get the date
-            if self.diagram['dates']['enable']:
-                date = event.get_date_object()
-                if self.diagram['dates']['onlyyears'] and date.get_year_valid():   # localized year
-                    date = self._get_date(Date(date.get_year()))
-                else:
-                    date = self._get_date(date)
+        def apply_name(node, ordname, line_delimiter):
+            name = ''
+            if self.base["chart"].capitalize() == 'Board' or \
+               self.base["chart"].capitalize() == 'Lineage' or \
+               self.base["chart"].capitalize() == 'Implex':
+                name = briefname.replace('\n', line_delimiter)
+            # if self.base["chart"].capitalize() == 'Implex':
+            #    name = briefname.replace('\n', line_delimiter)
 
-            # get event place (one of: hamlet, village, town, city, parish,
-            # county, province, region, state or country)
-            if self.diagram['places']['enable']:
-                place_type, place = get_event_place(self.database, event, True)
-                if event.note_list:
-                    event_notelist = event.get_note_list()
-                    for handle in event_notelist:
-                        note = self.database.get_note_from_handle(handle)
-                        unknown |= 'not sure' in note.get_styledtext().string
-                if place_type == 'Krankenhaus':
-                    place = place.split(', ')[0] \
-                        if self.diagram['places']['extended'] else place.split(', ')[1]
+            # Translation
+            if self.translate_dict:
+                lastname = '%s %s' % (ordname.prefix, ordname.lastname)
+                if lastname in self.translate_dict['en']:
+                    ordname.set_composename(None, None, None,
+                                            prefix=self.translate_dict['en'][lastname]['prefix'],
+                                            lastname=self.translate_dict['en'][lastname]['lastname'])
+                if self.diagram['names'] == 'briefname':
+                    name = ordname.briefname.replace('\n', line_delimiter)
+                elif self.diagram['names'] == 'shortname':
+                    name = ordname.shortname
 
-            return date, place, unknown
+            # Trennungen (Hyphenation)
+            if self.hyphenation['enable']:
+                if self.diagram['names'] == 'briefname':
+                    if ordname.lastname in self.hyphenation:
+                        ordname.set_composename(None, None, None, None, self.hyphenation[ordname.lastname])
+                        name = ordname.briefname.replace('\n', line_delimiter)
+                    else: name = name.replace('-', '-' + line_delimiter)
+                elif self.diagram['names'] == 'shortname':
+                    if ordname.lastname in self.hyphenation:
+                        ordname.set_composename(None, None, None, None, self.hyphenation[ordname.lastname])
+                        name = ordname.shortname
+                    else: name = ordname.shortname
+                if self.diagram['names'] == 'surname':
+                    if surname in self.hyphenation: name = self.hyphenation[surname]
+                    else: name = surname.replace(' ', line_delimiter).replace('-', '-\n')
+
+            return name
+
+        def apply_attribute(node, attr_list, type_list, line_delimiter):
+            string = ''
+            for a, attr in enumerate(attr_list):
+                if attr.type.value == AttributeType.CUSTOM and \
+                   attr.type.string in type_list:
+                    if a > 0: string += line_delimiter
+                    string += attr.value
+            string = string.replace('&', '&amp;')
+
+            return string
+
+        def apply_event(event):
+            __, evt_moddate, evt_place, _ = self.get_date_place(event, \
+                                        self.diagram['dates']['enable'], self.diagram['places']['enable'])
+            evt = ''
+            if evt_moddate: evt += '%s ' % evt_moddate
+            evt += '%s ' % event.description
+            adj = 'in'
+            for a in ['Gut', 'Schloss']:
+                if a in evt_place: adj = 'auf'
+            for a in ['Hümmling']:
+                if a in evt_place: adj = 'auf dem'
+
+            if evt_place: evt += '%s %s' % (adj, evt_place)
+
+            return evt
 
         # --------------------------------------------------------------------------------------
         pid = person.gramps_id
         ordname = ordName(person)
         briefname = ordname.briefname
         surname = ordname.surname
-        shortname = ordname.shortname
-        fullname = ordname.fullname
-
-        if pid == "I20477":
-            a = 1
 
         if self.local_node and keys_exists(self.local_node, 'VG') and self.local_node['VG']['mode'] > 0:
             node['htmloutput'] = True
         line_delimiter = '' if self.diagram['names'] == 'noname' else '\\n'
         if node['htmloutput']: line_delimiter = '<BR/>'
-
-        if self.base["chart"].capitalize() == 'Board' or \
-           self.base["chart"].capitalize() == 'Lineage' or \
-           self.base["chart"].capitalize() == 'Implex':
-            name = briefname.replace('\n', line_delimiter)
-        # if self.base["chart"].capitalize() == 'Implex':
-        #    name = briefname.replace('\n', line_delimiter)
-
-        # Translation
-        if self.translate_dict:
-            lastname = '%s %s' % (ordname.prefix, ordname.lastname)
-            if lastname in self.translate_dict['en']:
-                ordname.set_composename(None, None, None,
-                                        prefix=self.translate_dict['en'][lastname]['prefix'],
-                                        lastname=self.translate_dict['en'][lastname]['lastname'])
-            if self.diagram['names'] == 'briefname':
-                name = ordname.briefname.replace('\n', line_delimiter)
-            elif self.diagram['names'] == 'shortname':
-                name = ordname.shortname
-
-        # Trennungen (Hyphenation)
-        if self.hyphenation['enable']:
-            if self.diagram['names'] == 'briefname':
-                if ordname.lastname in self.hyphenation:
-                    ordname.set_composename(None, None, None, None, self.hyphenation[ordname.lastname])
-                    name = ordname.briefname.replace('\n', line_delimiter)
-                else: name = name.replace('-', '-' + line_delimiter)
-            elif self.diagram['names'] == 'shortname':
-                if ordname.lastname in self.hyphenation:
-                    ordname.set_composename(None, None, None, None, self.hyphenation[ordname.lastname])
-                    name = ordname.shortname
-                else: name = ordname.shortname
-            if self.diagram['names'] == 'surname':
-                if surname in self.hyphenation: name = self.hyphenation[surname]
-                else: name = surname.replace(' ', line_delimiter).replace('-', '-\n')
 
         birth_date, birth_place, birth_unknown = '', '', False
         death_date, death_place, death_unknown = '', '', False
@@ -2255,10 +2465,12 @@ class RelationsGraph(Report):
         death_event = get_death_or_fallback(self.database, person)
         # output the birth or fallback event
         if birth_event and self.diagram['dates']['enable']:
-            birth_date, birth_place, birth_unknown = get_date_place(birth_event)
+            __, birth_date, birth_place, birth_unknown = self.get_date_place(birth_event, \
+                                                            self.diagram['dates']['enable'], self.diagram['places']['enable'])
         # output the birth or fallback event
         if death_event and self.diagram['dates']['enable']:
-            death_date, death_place, death_unknown = get_date_place(death_event)
+            __, death_date, death_place, death_unknown = self.get_date_place(death_event, \
+                                                            self.diagram['dates']['enable'], self.diagram['places']['enable'])
 
         # --------------------------------------------------------------------------------------
         # see if we have KekuleNo's
@@ -2268,48 +2480,92 @@ class RelationsGraph(Report):
         if keys_true(self.diagram, 'number', 'HenryNo') and keys_true(self.people[pid], 'HenryNo'):
             apply_HenryNo(node, pid, line_delimiter)
 
-        if self.diagram['ids']['style'] == 2:   # IDs in own line
+        # see if IDs in own line ?
+        if self.diagram['ids']['style'] == 2:
             if node['label'] != '': node['label'] += line_delimiter
             node['label'] += '%s[%s]%s' % \
                 (self.diagram['ids']['markstart'], pid, self.diagram['ids']['markstop'])
 
+        # apply Name
         if self.diagram['names'].capitalize() != 'None':
+            name = apply_name(node, ordname, line_delimiter)
             if node['label'] != '': node['label'] += line_delimiter
+            if node['htmloutput']: node['label'] += '<B>'
             node['label'] += name
+            if node['htmloutput']: node['label'] += '</B>'
 
         if self.diagram['ids']['style'] == 1:   # IDs in same line
-            node['label'] += ' %s<SUB>[%s]</SUB>%s' % \
-                (self.diagram['ids']['markstart'], pid, self.diagram['ids']['markstop'])
+            node['label'] += ' %s<SUB>[%s]</SUB>%s%s' % \
+                (self.diagram['ids']['markstart'], pid, self.diagram['ids']['markstop'], line_delimiter)
 
-        birthsymbol, deathsymbol = '\u2217', '\u2020'
-        if not self.diagram['images']['exist']:
-            if node['label'] != '': node['label'] += line_delimiter
-            if birth_date or death_date:
-                node['label'] += '('
-                if birth_date: node['label'] += '%s' % birth_date
-                node['label'] += '–'
-                if death_date: node['label'] += '%s' % death_date
-                node['label'] += ')'
-
-            if birth_place or death_place:
-                if birth_unknown or death_unknown:
-                    if birth_unknown: birthsymbol = '\u003f'   #  questionmark
-                    if death_unknown: deathsymbol = '\u003f'
-                elif birth_place == death_place:
-                    birthsymbol = '\u2217/\u2020'
-                    death_place = None    # no need to print the same name twice
-
+        # apply Title
+        if self.check_keys(pid, 'attribute', 'enable'):
+            string = apply_attribute(node, person.attribute_list, ['Titel', 'Besitz'], line_delimiter)
+            if string:
                 if node['label'] != '': node['label'] += line_delimiter
-                if birth_place: node['label'] += '%s %s' % (birthsymbol, birth_place)
-                if birth_place and death_place: node['label'] += ' / '
-                if death_place: node['label'] += '%s %s' % (deathsymbol, death_place)
+                node['label'] += string
+            string = apply_attribute(node, person.attribute_list, 'Titel', line_delimiter)
+
+        # apply Civil State / Occupation
+        event, __ = find_specific_event \
+            (self.database, person, [EventType.CUSTOM], eventtypestring='Personenstand',
+             descriptionlist=['Ritter', 'Knappe'])
+        if event:
+            if node['label'] != '': node['label'] += line_delimiter
+            civil_state = apply_event(event)
+            node['label'] += civil_state.strip()
+        event, __ = find_specific_event \
+            (self.database, person, [EventType.OCCUPATION],
+             descriptionlist=['Burgmann', 'Kaufmann', 'Pastor', 'Pfarrer', 'Richter'])
+        if event:
+            if node['label'] != '': node['label'] += line_delimiter
+            occupation = apply_event(event)
+            node['label'] += occupation.strip()
+
+        if pid == 'I20395':
+            a = 1
+
+        bd_label = ''   # Debuging!
+        birthsymbol, deathsymbol = '\u2217', '\u2020'
+        if birth_date or death_date :
+            if node['label'] != '': bd_label += line_delimiter
+            bd_label += '('
+            if birth_date: bd_label += birth_date
+            bd_label += ' \u2015 '
+            if death_date:
+                bd_label += death_date
+            bd_label += ')'
+        if birth_place or death_place:
+            if bd_label != '': bd_label += line_delimiter
+            if birth_unknown or death_unknown:
+                if birth_unknown: birthsymbol = '\u003f'   #  questionmark
+                if death_unknown: deathsymbol = '\u003f'
+            elif birth_place == death_place:
+                birthsymbol = '\u2217/\u2020'
+                death_place = None    # no need to print the same place twice
+
+            if birth_place:
+                bd_label += '%s %s' % (birthsymbol, birth_place)
+            if birth_place and death_place: bd_label += ' / '
+            if death_place:
+                bd_label += '%s %s' % (deathsymbol, death_place)
+        """
         else:
-            if node['label'] != '': node['label'] += line_delimiter
-            if birth_date: node['label'] += '%s %s ' % (birthsymbol, birth_date)
-            if birth_place : node['label'] += birth_place
-            if node['label'] != '': node['label'] += line_delimiter
-            if death_date: node['label'] += '%s %s ' % (deathsymbol, death_date)
-            if death_place : node['label'] += death_place
+            if node['label'] != '': bd_label += line_delimiter
+            if birth_date: bd_label += '%s %s ' % (birthsymbol, birth_date)
+            if birth_place : bd_label += birth_place
+            if bd_label != '': bd_label += line_delimiter
+            if death_date: bd_label += '%s %s ' % (deathsymbol, death_date)
+            if death_place : bd_label += death_place
+        """
+        node['label'] += bd_label
+
+        # see if we have certification dates
+        if self.check_keys(pid, 'certificate', 'enable'):
+            cert_label = self.get_cert_date(person)
+            if cert_label:
+                if node['label'] != '': node['label'] += line_delimiter
+                node['label'] += cert_label
 
         # see if we have biological relationship (VerwandtschaftsGrad)
         if not pid in self.include["pidlist"] and \
@@ -2398,40 +2654,12 @@ class RelationsGraph(Report):
 
     def write_individualnode(self, person):
         """"""
-        def check_keys(*keys):
-            result = False
-            if not self.people[pid]['spouse']:
-                if self.people[pid]['type'] == 'A':
-                    result |= self.include['ancestor']['enable'] and keys_true(self.include, 'ancestor', keys) and \
-                        not pid in self.color['ancestor']['uncolorlist']
-                if self.people[pid]['type'] == 'P':
-                    result |= self.include['proband']['enable'] and keys_true(self.include, 'proband', keys) and \
-                        not pid in self.color['proband']['uncolorlist']
-                if self.people[pid]['type'] == 'D':
-                    result |= self.include['descendant']['enable'] and keys_true(self.include, 'descendant', keys) and \
-                        not pid in self.color['descendant']['uncolorlist']
-                if self.people[pid]['type'] == 'SP':
-                    result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
-            else:
-                if self.people[pid]['type'] == 'A':
-                    result |= self.include['ancestorspouse']['enable'] and keys_true(self.include, 'ancestorspouse', keys) and \
-                        not pid in self.color['ancestor']['uncolorlist']
-                if self.people[pid]['type'] == 'P':
-                    result |= self.include['probandspouse']['enable'] and keys_true(self.include, 'probandspouse', keys) and \
-                        not pid in self.color['proband']['uncolorlist']
-                if self.people[pid]['type'] == 'D':
-                    result |= self.include['descendantspouse']['enable'] and keys_true(self.include, 'descendantspouse', keys) and \
-                        not pid in self.color['descendant']['uncolorlist']
-                if self.people[pid]['type'] == 'SP':
-                    result |= self.include['descendantspouseparents']['enable'] and keys_true(self.include, 'descendantspouseparents', keys)
-
-            return result
-
         pid = person.gramps_id
         surname = ordName(person).surname
         gender = person.get_gender()
 
         node = Node('I', pid, gender)
+        node['htmloutput'] = True # self.diagram['ids'] != 0
 
         if keys_exists(self.node, 'person'):
             if gender == Person.FEMALE and keys_exists(self.node['person'], 'female'):
@@ -2442,7 +2670,7 @@ class RelationsGraph(Report):
                 node.update(self.node['person']['default'])
             else:
                 node.update(self.node['person'])
-            node['htmloutput'] = self.diagram['ids'] != 0
+        node['htmloutput'] = self.diagram['ids'] != 0
 
         if keys_exists(self.diagram, 'number', 'markstart'):
             node['htmloutput'] |= self.diagram['number']['markstart'] != 'None'
@@ -2480,7 +2708,7 @@ class RelationsGraph(Report):
             if 'proband' in self.color and \
               any(k in self.color['proband'] for k in ('male', 'female')):
                 for proband in [self.color['proband']['male'], self.color['proband']['female']]:
-                    if pid in proband['pid']:
+                    if keys_true(proband, 'pid') and pid in proband['pid']:
                         if 'style' in proband: node['style'] = proband['style']
                         if 'bordercolor' in proband: node['bordercolor'] = proband['bordercolor']
                         node['fillcolor'] = proband['fillcolor']
@@ -2526,13 +2754,13 @@ class RelationsGraph(Report):
 
         # see if we have Level colours that match this generation
         if self.color['levelcolor'] and pid in self.generation:
-            if check_keys('color'):
+            if self.check_keys(pid, 'color'):
                 self.include_levelcolor(self.generation[pid], node)
                 if keys_true(self.include['descendantextra'], pid, "fillcolor"):
                     node['fillcolor'] = self.include['descendantextra'][pid]["fillcolor"]
 
         # see if we have persons with additional colors
-        if pid == 'I00222':
+        if pid == 'I20411':
             a = 1
         if pid in self.color['add-person']:
             node['fillcolor'] = self.color['add-person'][pid]['fillcolor']
@@ -2540,7 +2768,7 @@ class RelationsGraph(Report):
 
         # see if we have an image to use for this person
         self.diagram['images']['exist'] = False
-        self.diagram['images']['enable'] = check_keys('images', 'enable')
+        self.diagram['images']['enable'] = self.check_keys(pid, 'images', 'enable')
         if self.diagram['images']['enable']:
             self.update_image_start(person, node)
 
@@ -2678,17 +2906,19 @@ class RelationsGraph(Report):
                        (event.get_type() == EventType.CUSTOM and event.get_type().string == 'Trauung'):
                         wedding_date, wedding_place = get_date_place(event)
 
+        # see if we have certification dates
+        certificate_str = None
+        if (node['type'] == 'A' and keys_true(self.include, 'ancestorfamily', 'certificate', 'enable')) or \
+           (node['type'] == 'P' and keys_true(self.include, 'probandfamily', 'certificate', 'enable')) or \
+           (node['type'] == 'D' and keys_true(self.include, 'descendantfamily', 'certificate', 'enable')):
+            certificate_str = self.get_cert_date(family)
+
         # figure out the number of children (if any)
         children_str = None
-        """
-        if (self.include['ancestorfamily']['childscount'] and self.generation[family_id] < 0) or \
-           (self.include['probandfamily']['childscount']) or \
-           (self.include['descendantfamily']['childscount'] and self.generation[family_id] > 0):
-        """
-        if (self.include['ancestorfamily']['childscount'] and self.families[family_id]['type'] == 'A') or \
-           (self.include['probandfamily']['childscount'] and self.families[family_id]['type'] == 'P') or \
-           (self.include['descendantfamily']['childscount'] and self.families[family_id]['type'] == 'D') or \
-           (self.include['descendantspouseparents']['childscount'] and self.families[family_id]['type'] == 'SP'):
+        if (keys_true(self.include, 'ancestorfamily', 'childscount') and self.families[family_id]['type'] == 'A') or \
+           (keys_true(self.include, 'probandfamily','childscount') and self.families[family_id]['type'] == 'P') or \
+           (keys_true(self.include, 'descendantfamily', 'childscount') and self.families[family_id]['type'] == 'D') or \
+           (keys_true(self.include, 'descendantspouseparents', 'childscount') and self.families[family_id]['type'] == 'SP'):
             child_count = len(family.get_child_ref_list())
             if child_count >= 1:
                 children_str = self.ngettext("{number_of} child", "{number_of} children", \
@@ -2732,10 +2962,15 @@ class RelationsGraph(Report):
             if divorce_date: node['label'] += ' %s' % divorce_date
             if divorce_place: node['label'] += ' %s' % divorce_place
 
+        # see if we have certification dates
+        if certificate_str:
+            if node['label'] != '': node['label'] += line_delimiter
+            node['label'] += certificate_str
+
         # see if we have children
         if children_str:
             if node['label'] != '': node['label'] += line_delimiter
-            node['label'] += '%s' % children_str
+            node['label'] += children_str
 
         # see if we have biological relationship
         if gb_exist:
@@ -2876,6 +3111,11 @@ class RelationsGraph(Report):
 
                     extension += ' taillabel="\n%s%s" labelfontcolor="%s" ' % \
                        (label, labelspace, fontcolor)   # labeldistance="%.1f" distance
+            else:
+                extension += ' penwidth=%d' % self.edge['penwidth']
+
+        # Default arrowstyle
+        head, tail = self.edge['arrowheadstyle'], self.edge['arrowtailstyle']
 
         # Check if minimum length required (vertical)
         if self.nodeshift:
@@ -2887,8 +3127,7 @@ class RelationsGraph(Report):
         comment = self._("%s: %s") % (name, person_rn)
 
         # we're done -- add the link
-        self.doc.add_link(id1=pid, id2=family_id, style=style,
-                        head=self.edge['arrowheadstyle'], tail=self.edge['arrowtailstyle'],
+        self.doc.add_link(id1=pid, id2=family_id, style=style, head=head, tail=tail,
                             extension=extension, comment=comment)
 
     def write_parentimplexlink(self, family, father, mother):
@@ -3198,7 +3437,7 @@ class RelationsGraph(Report):
 
                 'style': { 'base': 'solid'},
                 'color': { 'base': 'black'},
-                'penwidth': { 'base': 1 }
+                'penwidth': { 'base': 2 }
             }
             data['comment'] = self._("child: %s") % data['name']
 
@@ -3213,10 +3452,10 @@ class RelationsGraph(Report):
                 # print('ID: %s' % data['pid'])
                 head, tail = self.edge['arrowheadstyle'], self.edge['arrowtailstyle']
                 extension = 'color="%s" penwidth=%.1f' % (data['color'][key], data['penwidth'][key])
-                if i == len(data['style']) -1:
-                    if data['minlen'] != 2:
-                        # head, tail = self.edge['arrowtailstyle'], self.edge['arrowheadstyle']
-                        extension += ' minlen=%s' % data['minlen']
+                if (i == len(data['style']) -1) and (data['minlen'] != 2):
+                    head = None
+                    extension += ' minlen=%s' % data['minlen']
+
                 comment = '%d. %s' % (i, data['comment'])
 
                 self.doc.add_link(id1=family_id, id2=child_id, style=data['style'][key],
