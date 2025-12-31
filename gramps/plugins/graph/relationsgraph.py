@@ -207,7 +207,7 @@ class RelationsGraph(Report):
         self.deleted_people = 0
         self.deleted_families = 0
 
-        self.maxgeneration = max(self.maxparents_generation, self.maxchildren_generation)
+        self.maxgeneration = max(self.maxparents_generation, self.maxchildren_generation, self.maxproperty_generation)
         self.interest_list, self.uninterest_list = [], []
         for pid in self.include["pidlist"]:
             person = self.database.get_person_from_gramps_id(pid)
@@ -291,7 +291,7 @@ class RelationsGraph(Report):
         self.usesubgraphs = True
         self.base = {}
         self._base = {
-            "chart": "Board",   # Board, Implex, Lineage
+            "chart": "Board",   # Board, Implex, Lineage, Property
             "chart": "",   # "", Gradient, Level
             "locale": "default",
 
@@ -304,7 +304,7 @@ class RelationsGraph(Report):
             "note": ""
         }
 
-        self.maxparents_generation, self.maxchildren_generation, self.maxgeneration = 1, 1, 1
+        self.maxparents_generation, self.maxchildren_generation, self.maxproperty_generation, self.maxgeneration = 0, 0, 0, 0
         self.maxspouse_generation = 0
         self.shift_generation = 0
 
@@ -395,13 +395,17 @@ class RelationsGraph(Report):
                                  "civil": False, "church": False, "line": False,
                                  "childscount": False
                                 },
-            "descendantextra": {"shift": 0,
+            "descendantextra": {"shift_generation": 0,
                                 "HenryNo": ""},
             "descendantfamilyextra": {"enable": False},
 
             "descendantpaternal": False,
             "descendantmaternal": False,
-            "descendantnamelist": []
+            "descendantnamelist": [],
+
+            "property": {"enable": False,
+                "pidlist": []
+            }
         }
 
         self.color = {}
@@ -425,16 +429,21 @@ class RelationsGraph(Report):
             "add-xdnaoptXX": {},
             "add-xdnaoptXY": {},
 
-            "levelcolor": False,
-            "gradientcolor": False,
-            "degreecolor": {
-                "enable": False,
+            "levelcolor": {"enable": False},
+            "gradientcolor": {"enable": False},
+            "degreecolor": {"enable": False,
                 "male": {"style": "striped", "fillcolor": "#0000FF"},
                 "female": {"style": "wedged", "fillcolor": "#FF0000"},
                 "descendant": {"fillcolor": "#D3D3D3"}
             },
+            "clustercolor": {"enable": False,
+                "level": [{"fillcolor": "#FFFFFF", "fontcolor": "#000000", "pidlist": []}]
+            },
 
-            "shiftgeneration": {"shift": 0, "reverse": False},
+            "shiftgeneration": {
+                "shift": 0,
+                "reverse": False
+            },
 
             "scheme": "",
             "threshold": 127.5,
@@ -445,13 +454,11 @@ class RelationsGraph(Report):
             "enable": False   # korrekt!
         }
         self._pathes = {
-            "searchtool": "NX",
             "spouse": False,
 
             "sources": "",
             "targets": "",
             "edges": {},
-            "cutoff": 5,   # 2* (self.maxparents_generation + self.maxchildren_generation) +1
 
             "node": {
               "rotate": [],
@@ -703,7 +710,7 @@ class RelationsGraph(Report):
         """
         self._local_init()
 
-        if not self.base["chart"].capitalize() in 'Board, Implex, Lineage':
+        if not self.base["chart"].capitalize() in ['Board', 'Implex', 'Lineage', 'Property']:
             return
 
         if keys_true(self.base, 'analyzefile'):
@@ -719,6 +726,11 @@ class RelationsGraph(Report):
         # starting with the people of interest we add their children:
         if self.maxchildren_generation > 0:
             print('Children by Generation ...')
+            self.find_children_generation()
+
+        # starting with the people of interest we add their properties:
+        if self.maxproperty_generation > 0:
+            print('Propterty by Generation ...')
             self.find_children_generation()
 
         if self.maxgeneration > 0:
@@ -799,7 +811,7 @@ class RelationsGraph(Report):
         self.doc.add_comment('# %s' %
                              self._('Initial list of people of interest:'))
         """
-        if self.base["chart"].capitalize() in 'Board, Implex, Lineage':
+        if self.base["chart"].capitalize() in ['Board', 'Implex', 'Lineage', 'Property']:
             for pid in self.interest_list:
                 person = self.database.get_person_from_gramps_id(pid)
                 name = person.get_primary_name().get_regular_name()
@@ -1227,7 +1239,7 @@ class RelationsGraph(Report):
             if henryno not in self.children[pid]['HenryNo']:
                 self.children[pid]['HenryNo'].append(henryno)
             if self.generation[pid] > generation:
-                if keys_true(self.include['descendantextra'], pid, "shiftgeneration"):
+                if keys_true(self.include['descendantextra'], pid, "shift_generation"):
                     pass # korrekt!
                 else:
                     self.generation[pid] = generation
@@ -1249,20 +1261,32 @@ class RelationsGraph(Report):
             self.children[pid]['VG']['generation'][generation] = 0
         self.children[pid]['VG']['generation'][generation] += 1
 
-        # iterate through this person's families
-        for family_handle in person.get_family_handle_list():
-            family = self.database.get_family_from_handle(family_handle)
-            family_id = family.gramps_id
-            if family_id in self.include['unfidlist']: continue
+        relation_dict = {}
+        property_id = self.include['property']['pidlist'][0]
+        for rel_handle in person.get_family_handle_list():
+            relation = self.database.get_family_from_handle(rel_handle)
+            __, __, father_name, __, __, mother_name = get_name_from_gramps_id(self.database, relation.gramps_id)
+            relation_dict[relation.gramps_id] = [rel_handle, relation, father_name, mother_name]
 
-            if family_id == 'F5840': # 'F1737':
+        if self.base["chart"].capitalize() == 'Property' and \
+           len(relation_dict) > 1:
+            for key, value in relation_dict.items():
+                if property_id in key.split('-')[0]:
+                    del relation_dict[key]
+                    break
+
+        # iterate through this person's families
+        for relation_id, relation in relation_dict.items():
+            if relation_id in self.include['unfidlist']: continue
+
+            if relation_id == 'P1234-01': # 'F1737':
                 a = 1
 
-            nxG.add_node(family_id)   # fill nxG nodes ...
-            nxG.add_edge(pid, family_id)   # fill nxG edges ...
+            nxG.add_node(relation_id)   # fill nxG nodes ...
+            nxG.add_edge(pid, relation_id)   # fill nxG edges ...
 
             # Family between parents and children generation
-            self.generation[family_id] = gen_no + 0.5
+            self.generation[relation_id] = gen_no + 0.5
 
             #  include only if generation < maxspouse_generation
             if self.maxspouse_generation > 0:
@@ -1271,20 +1295,13 @@ class RelationsGraph(Report):
 
             # include only when parents in descendantnamelist
             if self.include['descendantnamelist']:   # only Persons in descendantNameList!
-                father_handle = family.get_father_handle()
-                mother_handle = family.get_mother_handle()
-                if father_handle:
-                    father = self.database.get_person_from_handle(father_handle)
-                    father_name = father.get_primary_name().get_primary_surname().surname
-                if mother_handle:
-                    mother = self.database.get_person_from_handle(mother_handle)
-                    mother_name = mother.get_primary_name().get_primary_surname().surname
-                if (father_handle and father_name not in self.include['descendantnamelist']) and \
-                   (mother_handle and mother_name not in self.include['descendantnamelist']):
+                father, __, father_name, mother, __, mother_name = get_name_from_gramps_id(self.database, relation_id)
+                if (father and father_name not in self.include['descendantnamelist']) and \
+                   (mother and mother_name not in self.include['descendantnamelist']):
                     continue
 
             # include the spouse from this person's family
-            spouse_handle = utils.find_spouse(person, family)
+            spouse_handle = utils.find_spouse(person, relation[1])
             if self.include['descendantspouse']["enable"] and spouse_handle:
                 spouse = self.database.get_person_from_handle(spouse_handle)
                 spouse_id = spouse.get_gramps_id()
@@ -1292,15 +1309,15 @@ class RelationsGraph(Report):
                     continue
 
                 nxG.add_node(spouse_id)   # fill nxG nodes ...
-                nxG.add_edge(spouse_id, family_id)   # fill nxG edges ...
+                nxG.add_edge(spouse_id, relation_id)   # fill nxG edges ...
 
                 if spouse_id not in self.children:
                     self.children[spouse_id] = {'type': 'D', 'HenryNo': [], 'handle': spouse_handle,
                                                 'spouse': True, 'sort': self.get_birthyear(person)}
                     self.generation[spouse_id] = gen_no
 
-                    if family_id not in self.families:
-                        self.families[family_id ] = {'mode': 'N', 'type': 'D', 'handle': family_handle}
+                    if relation_id not in self.families:
+                        self.families[relation_id ] = {'mode': 'N', 'type': 'D', 'handle': relation[0]}
 
                     if self.maxchildren_generation >= generation and \
                        self.include['descendantspouseparents']['enable']:
@@ -1308,20 +1325,34 @@ class RelationsGraph(Report):
 
             # queue up any children from this person's family
             idx = 0
-            for child_ref in family.get_child_ref_list():
+            child_dict = {}
+            for child_ref in relation[1].get_child_ref_list():
                 child = self.database.get_person_from_handle(child_ref.ref)
                 child_id = child.get_gramps_id()
                 if child_id in self.no_descendant_list:
                     continue
 
-                nxG.add_node(child_id)   # fill nxG nodes
-                nxG.add_edge(family_id, child_id)   # fill nxG edges ...
+                if self.base["chart"].capitalize() == 'Property':
+                    childrelation_dict = {}
+                    for childrel_handle in child.get_family_handle_list():
+                        childrelation = self.database.get_family_from_handle(childrel_handle)
+                        childrelation_dict[childrelation.gramps_id] = [childrel_handle]
+                    for key in childrelation_dict.keys():
+                        if property_id in key.split('-')[0]:
+                            child_dict[child_id] = [child_ref.ref, child]
+                            break
+                else:
+                    child_dict[child_id] = [child_ref.ref, child]
+
+            for key, value in child_dict.items():
+                nxG.add_node(key)   # fill nxG nodes
+                nxG.add_edge(relation_id, key)   # fill nxG edges ...
 
                 if self.include['descendantfamily']['enable']:
-                    if family_id not in self.families:
-                        self.families[family_id] = {'mode': 'N', 'type': 'D', 'handle': family_handle}
+                    if relation_id not in self.families:
+                        self.families[relation_id] = {'mode': 'N', 'type': 'D', 'handle': relation[0]}
 
-                self._apply_children(generation +1, child_ref.ref, gender, self.childrenCounter, henryno + _HENRY[idx])
+                self._apply_children(generation +1, value[0], gender, self.childrenCounter, henryno + _HENRY[idx])
                 idx += 1
 
         return None
@@ -1329,15 +1360,18 @@ class RelationsGraph(Report):
     def find_children_generation(self):
         """ find any children by generation """
         # we need to start with all of our "people of interest"
-        self.childrenNotYetProcessed = set(self.interest_list)
+        self.successorNotYetProcessed = set(self.interest_list)
 
         # now we find all the children of our people of interest
-        self.max_generation = self.maxchildren_generation
+        self.max_generation = 1
+        self.max_generation = self.maxchildren_generation \
+            if self.base['chart'].capitalize() != 'Property' else \
+            self.maxproperty_generation
         if keys_true(self.color, 'generationcolor', 'shift'):
             self.shift_generation = self.color['generationcolor']['shift']
         self.childrenCounter = 0
-        while len(self.childrenNotYetProcessed) > 0:
-            key = self.childrenNotYetProcessed.pop()
+        while len(self.successorNotYetProcessed) > 0:
+            key = self.successorNotYetProcessed.pop()
             person = self.database.get_person_from_gramps_id(key)
             if person:
                 self._apply_children(0, person.handle, person.gender, 0, '1')
@@ -1373,9 +1407,16 @@ class RelationsGraph(Report):
         # create property 'gen' on highest level
         # nxG['gen'] = 0
 
+        # add extra relations to families
+        if keys_true(self.include, 'property', 'enable') and \
+           keys_true(self.include, 'property', 'relationextra', 'enable'):
+            for key in self.include['property']['relationextra']:
+                if key == 'enable': continue
+                relation = self.database.get_family_from_gramps_id(key)
+                self.families[key] = {'mode': 'N', 'type': 'D', 'handle': relation.handle}
+
         # link parents and children to families
         for key, value in self.families.items():
-
             # get the parents for this family
             family = self.database.get_family_from_gramps_id(key)
             father_handle = family.get_father_handle()
@@ -1437,11 +1478,6 @@ class RelationsGraph(Report):
         """"""
         debug = False
 
-        if pathes['searchtool'] == 'GT':
-            print('  GT: All Paths', end = '', flush=True)
-        if pathes['searchtool'] == 'NX':
-            print('  NX: Simple Edge Paths', flush=True)
-
         for path in list(pathes):
             if not path.startswith('path'): continue
 
@@ -1478,8 +1514,9 @@ class RelationsGraph(Report):
             time_actual = datetime.datetime.now()
 
             # Graph-Tool -----------------------------------------------------------------------
-            if pathes['searchtool'] == 'GT':
+            if pathes[path]['searchtool'] == 'GT':
                 self.lineages['nx2gt'], self.lineages['gt2nx'] = {}, {}
+                print('  GT: All Paths', end = '', flush=True)
 
                 gtG = nx2gt(nxG)   # transfer NetworkX data to GraphTool data
                 # gtG.list_properties()
@@ -1503,14 +1540,14 @@ class RelationsGraph(Report):
                 pathsGT = shortest_path(gtG, source=source_vertex, target=target_vertex, \
                                         weights=gtG.edge_properties["gen"])
                 pathsGT_len = len(pathsGT[0])   # Number of vertexes in shortes path
-                if pathes["cutoff"] > pathsGT_len:
-                    pathes["cutoff"] = pathsGT_len + 1
+                if pathes[path]["cutoff"] > pathsGT_len:
+                    pathes[path]["cutoff"] = pathsGT_len + 1
                 # pathsGT = all_shortest_paths(gtG, source=source_vertex, target=target_vertex, \
                 #                             weights=gtG.edge_properties["gen"])
 
                 # compute >all< paths (from graph_tool.topology)
                 pathsGT = all_paths(gtG, source=source_vertex, target=target_vertex, \
-                                    cutoff=pathes["cutoff"], edges=True)
+                                    cutoff=pathes[path]["cutoff"], edges=True)
 
                 # transfer Graph Tool path to common structure
                 edgeGT = []   # local edge list
@@ -1536,12 +1573,13 @@ class RelationsGraph(Report):
                 pathes[path][path_num] = edgeGT
 
             # NetworkX -------------------------------------------------------------------------
-            if pathes['searchtool'] == 'NX':
+            if pathes[path]['searchtool'] == 'NX':
                 edgeNX = []   # local edge list
+                print('  NX: Simple Edge Paths', flush=True)
                 try:
                     edgeNX = list(nx.all_simple_edge_paths(nxG, \
                         source=pathes[path]['source_id'], target=pathes[path]['target_id'], \
-                        cutoff=pathes['cutoff']))
+                        cutoff=pathes[path]['cutoff']))
                 except nx.NodeNotFound:
                     print('  Node(s) not found: %s -> %s' % (pathes[path]['source_id'], pathes[path]['target_id']))
                     if self.base['analyzefile']:
@@ -1552,26 +1590,34 @@ class RelationsGraph(Report):
 
                 pathes[path][path_num] = edgeNX
 
-            # Test if generation are first strictly increasing then strictly decreasing
-            for edge_num, edge in enumerate(list(pathes[path][path_num])):
-                data_list = list(itertools.chain.from_iterable(edge))
-                gen_list, gen_rank = self.calculate_ranks(data_list)
-                max_value = max(gen_list)
-                apx_index = gen_list.index(max_value)
+            # Both -----------------------------------------------------------------------------
+            if pathes[path]['searchtool'] in ['GT', 'NX']:
+                # Test if generation are first strictly increasing then strictly decreasing
+                for edge_num, edge in enumerate(list(pathes[path][path_num])):
+                    data_list = list(itertools.chain.from_iterable(edge))
+                    gen_list, gen_rank = self.calculate_ranks(data_list)
+                    max_value = max(gen_list)
+                    apx_index = gen_list.index(max_value)
 
-                inc_list, dec_list = gen_list[:apx_index], gen_list[apx_index:]
-                if not(inc_list == sorted(inc_list)): # and dec_list == sorted(dec_list, reverse=True)
-                    del(pathes[path][path_num][edge_num])
-                    path_information = 'Path not strictly increasing/decreasing (monoton)'
-                    print("  %d. Path (%d) -> %s" % (path_num, len(data_list), path_information))
+                    inc_list, dec_list = gen_list[:apx_index], gen_list[apx_index:]
+                    if not(inc_list == sorted(inc_list)): # and dec_list == sorted(dec_list, reverse=True)
+                        del(pathes[path][path_num][edge_num])
+                        path_information = 'Path not strictly increasing/decreasing (monoton)'
+                        print("  %d. Path (%d) -> %s" % (path_num, len(data_list), path_information))
 
-            # Test if path in UnPathList
-            if keys_true(self.pathes, 'unpathlist') and \
-               path_num in self.pathes['unpathlist']:
-                if pathes[path][path_num]:
-                    del(pathes[path][path_num])
-                path_information = 'Path in UnPathList'
-                print("  %d. Path (%d) -> %s" % (path_num, len(pathes[path]), path_information))
+                # Test if path in UnPathList
+                if keys_true(self.pathes, path, 'unpathlist') and \
+                   path_num in self.pathes[path]['unpathlist']:
+                    if pathes[path][path_num]:
+                        del(pathes[path][path_num])
+                    path_information = 'Path in UnPathList'
+                    print("  %d. Path (%d) -> %s" % (path_num, len(pathes[path]), path_information))
+
+
+            # Direct ---------------------------------------------------------------------------
+            if pathes[path]['searchtool'] == 'DT':
+                edgeDT = [tuple(x) for x in pathes[path]['edges']]
+                pathes[path][path_num] = [edgeDT]
 
             # Done -----------------------------------------------------------------------------
             pathes['time']['calc'] = (datetime.datetime.now() - pathes['time']['begin']).total_seconds()
@@ -2232,7 +2278,6 @@ class RelationsGraph(Report):
     def include_levelcolor(self, generation, node):
         """"""
         rgb_color = (0, 0, 0)
-
         color_scheme = self.color['scheme']
         color_base = self.color['base'].BACKGROUND[color_scheme]
 
@@ -2260,6 +2305,17 @@ class RelationsGraph(Report):
         font_color = '#000000' if self.color['base'].isLight(rgb_color, self.color["threshold"]) else '#FFFFFF'
 
         node['fontcolor'] = font_color
+        return True
+
+    def include_clustercolor(self, person, node):
+        """"""
+        pid = person.gramps_id
+        level = self.color['clustercolor']['level']
+        cluster = next((k for k, v in level.items() if pid in v), None)
+        if cluster:
+            self.include_levelcolor(int(cluster), node)
+
+        return True
 
     def include_gradientcolor(self, person, node):
         """"""
@@ -2319,6 +2375,7 @@ class RelationsGraph(Report):
             # node['extension'] += ' gradientangle=%d' % 0 if gender == 1 else ' gradientangle=%d' % 90
 
             return True
+
 
     def include_xdnacolor(self, pid, node):
         """"""
@@ -2384,12 +2441,8 @@ class RelationsGraph(Report):
 
         def apply_name(node, ordname, line_delimiter):
             name = ''
-            if self.base["chart"].capitalize() == 'Board' or \
-               self.base["chart"].capitalize() == 'Lineage' or \
-               self.base["chart"].capitalize() == 'Implex':
+            if self.base["chart"].capitalize() in ['Board', 'Lineage', 'Implex', 'Property']:
                 name = briefname.replace('\n', line_delimiter)
-            # if self.base["chart"].capitalize() == 'Implex':
-            #    name = briefname.replace('\n', line_delimiter)
 
             # Translation
             if self.translate_dict:
@@ -2454,7 +2507,7 @@ class RelationsGraph(Report):
         briefname = ordname.briefname
         surname = ordname.surname
 
-        if self.local_node and keys_exists(self.local_node, 'VG') and self.local_node['VG']['mode'] > 0:
+        if keys_true(self.local_node, 'VG') and self.local_node['VG']['mode'] > 0:
             node['htmloutput'] = True
         line_delimiter = '' if self.diagram['names'] == 'noname' else '\\n'
         if node['htmloutput']: line_delimiter = '<BR/>'
@@ -2560,6 +2613,8 @@ class RelationsGraph(Report):
         """
         node['label'] += bd_label
 
+        if pid == 'P1234-02':
+            a = 1
         # see if we have certification dates
         if self.check_keys(pid, 'certificate', 'enable'):
             cert_label = self.get_cert_date(person)
@@ -2659,8 +2714,6 @@ class RelationsGraph(Report):
         gender = person.get_gender()
 
         node = Node('I', pid, gender)
-        node['htmloutput'] = True # self.diagram['ids'] != 0
-
         if keys_exists(self.node, 'person'):
             if gender == Person.FEMALE and keys_exists(self.node['person'], 'female'):
                 node.update(self.node['person']['female'])
@@ -2722,12 +2775,16 @@ class RelationsGraph(Report):
                         node['extension'] += ' group="%s"' % key
 
         # see if we have Gradient colours that match this person
-        if self.color['gradientcolor']:
+        if keys_true(self.color, 'gradientcolor', 'enable'):
             self.include_gradientcolor(person, node)
 
         # see if we have Degree colours that match this person
         if keys_true(self.color, 'degreecolor', 'enable'):
             self.include_degreecolor(person, node)
+
+        # see if we have Cluster colours that match this person
+        if keys_true(self.color, 'clustercolor', 'enable'):
+            self.include_clustercolor(person, node)
 
         # see if we have names with additional colors
         if surname in self.color['add-name']:
@@ -2752,15 +2809,15 @@ class RelationsGraph(Report):
                 self.include_lineage(person, node, True)
             self.include_gender(person, node)
 
-        # see if we have Level colours that match this generation
-        if self.color['levelcolor'] and pid in self.generation:
+        # see if we have Level colours that match this f
+        if keys_true(self.color, 'levelcolor', 'enable'):
             if self.check_keys(pid, 'color'):
                 self.include_levelcolor(self.generation[pid], node)
                 if keys_true(self.include['descendantextra'], pid, "fillcolor"):
                     node['fillcolor'] = self.include['descendantextra'][pid]["fillcolor"]
 
         # see if we have persons with additional colors
-        if pid == 'I20411':
+        if pid == 'I20459':
             a = 1
         if pid in self.color['add-person']:
             node['fillcolor'] = self.color['add-person'][pid]['fillcolor']
@@ -2768,7 +2825,7 @@ class RelationsGraph(Report):
 
         # see if we have an image to use for this person
         self.diagram['images']['exist'] = False
-        self.diagram['images']['enable'] = self.check_keys(pid, 'images', 'enable')
+        self.diagram['images']['enable'] = True # self.check_keys(pid, 'images', 'enable')
         if self.diagram['images']['enable']:
             self.update_image_start(person, node)
 
@@ -2867,12 +2924,13 @@ class RelationsGraph(Report):
             return date, place
 
         family_id = family.get_gramps_id()
-        if family_id == 'F1737':
+        if family_id == 'P1234-02':
             a = 1
 
         # figure out a wedding date or placename we can use
         marriage_date, marriage_place, wedding_date, wedding_place, \
             divorce_date, divorce_place = None, None, None, None, None, None
+        ownership_date, ownership_place = '', ''
         if self.diagram['dates']['enable'] or self.diagram['places']['enable']:
           # (self.diagram['places']['images'] and self.diagram['images']['exist'])
             for event_ref in family.get_event_ref_list():
@@ -2896,17 +2954,22 @@ class RelationsGraph(Report):
                     if (event.get_type().value == EventType.CUSTOM and event.get_type().string == 'Trauung'):
                         wedding_date, wedding_place = get_date_place(event)
 
-                if keys_true(self.include, 'descendantfamilyextra') and \
+                if keys_true(self.include, 'descendantfamilyextra', 'enable') and \
                    family_id in self.include['descendantfamilyextra']:
-                    value = self.include['descendantfamilyextra'][family_id]
-                    if 'civil' in value and value['civil'] and \
-                       event.get_type() == EventType.MARRIAGE:
-                        marriage_date, marriage_place = get_date_place(event)
-                    if 'church' in value and value['church'] and \
-                       (event.get_type() == EventType.CUSTOM and event.get_type().string == 'Trauung'):
-                        wedding_date, wedding_place = get_date_place(event)
+                        value = self.include['descendantfamilyextra'][family_id]
+                        if 'civil' in value and value['civil'] and \
+                           event.get_type() == EventType.MARRIAGE:
+                            marriage_date, marriage_place = get_date_place(event)
+                        if 'church' in value and value['church'] and \
+                           (event.get_type() == EventType.CUSTOM and event.get_type().string == 'Trauung'):
+                            wedding_date, wedding_place = get_date_place(event)
 
-        # see if we have certification dates
+                # figure out a ownership dates
+                if event and (event.get_type().value == EventType.CUSTOM and event.get_type().string == 'Besitzübergang'):
+                    __, ownership_date, ownership_place, __ = self.get_date_place(event, \
+                                                                self.diagram['dates']['enable'], self.diagram['places']['enable'])
+
+        # figure out a certification dates
         certificate_str = None
         if (node['type'] == 'A' and keys_true(self.include, 'ancestorfamily', 'certificate', 'enable')) or \
            (node['type'] == 'P' and keys_true(self.include, 'probandfamily', 'certificate', 'enable')) or \
@@ -2915,12 +2978,13 @@ class RelationsGraph(Report):
 
         # figure out the number of children (if any)
         children_str = None
+        property_id = self.include['property']['pidlist'][0]
         if (keys_true(self.include, 'ancestorfamily', 'childscount') and self.families[family_id]['type'] == 'A') or \
            (keys_true(self.include, 'probandfamily','childscount') and self.families[family_id]['type'] == 'P') or \
            (keys_true(self.include, 'descendantfamily', 'childscount') and self.families[family_id]['type'] == 'D') or \
            (keys_true(self.include, 'descendantspouseparents', 'childscount') and self.families[family_id]['type'] == 'SP'):
-            child_count = len(family.get_child_ref_list())
-            if child_count >= 1:
+            if not property_id in family.gramps_id.split('-')[0]:
+                child_count = len(family.get_child_ref_list())
                 children_str = self.ngettext("{number_of} child", "{number_of} children", \
                                              child_count).format(number_of=child_count)
 
@@ -2928,7 +2992,6 @@ class RelationsGraph(Report):
         gb_exist, gb_str, gsb_str = self.include_family_VG(family, 2)
         node['htmloutput'] |= gb_exist
         line_delimiter = '<BR/>' if node['htmloutput'] else '\\n'
-
         """
         if self.diagram['ids'] == 1:
             node['label'] += "<SUB>[%s]</SUB>" % family_id
@@ -2938,6 +3001,7 @@ class RelationsGraph(Report):
             node['label'] += '%s[%s]%s' % \
                 (self.diagram['ids']['markstart'], family_id, self.diagram['ids']['markstop'])
 
+        # see if we have marriage
         if marriage_date or marriage_place:
             if node['label'] != '': node['label'] += line_delimiter
             node['label'] += '\u26AD'
@@ -2947,6 +3011,7 @@ class RelationsGraph(Report):
                     if not (marriage_date and wedding_date) else ' '
             if marriage_place: node['label'] += ' %s' % marriage_place
 
+        # see if we have wedding
         if wedding_date or wedding_place:
             if node['label'] != '': node['label'] += line_delimiter
             node['label'] += '\u26AD'
@@ -2956,11 +3021,17 @@ class RelationsGraph(Report):
                     if not (marriage_date and wedding_date) else ' '
             if wedding_place: node['label'] += ' %s' % wedding_place
 
+        # see if we have divorce
         if divorce_date or divorce_place:
             if node['label'] != '': node['label'] += line_delimiter
             node['label'] += '\u26AE'
             if divorce_date: node['label'] += ' %s' % divorce_date
             if divorce_place: node['label'] += ' %s' % divorce_place
+
+        # see if we have ownership dates
+        if ownership_date:
+            if node['label'] != '': node['label'] += line_delimiter
+            node['label'] += '%s%sBesitzwechsel%s%s' % (ownership_date, line_delimiter, line_delimiter, ownership_place)
 
         # see if we have certification dates
         if certificate_str:
@@ -3381,8 +3452,7 @@ class RelationsGraph(Report):
         mother_handle = family.get_mother_handle()
         mother = self.database.get_person_from_handle(mother_handle) if mother_handle else None
 
-        if self.base["chart"].capitalize() == 'Board' or \
-           self.base["chart"].capitalize() == 'Lineage':
+        if self.base["chart"].capitalize() in ['Board', 'Lineage', 'Property']:
             if direction == 'FM':   # Father -- Mother
                 if self.include['relativspouse']:
                     # force the node in a line from left to right
@@ -3487,7 +3557,8 @@ class RelationsGraph(Report):
                 FCkey = '%s-%s' % (family.gramps_id, child.get_gramps_id())
                 CFkey = '%s-%s' % (child.get_gramps_id(), family.gramps_id)
                 # see if we have Lineages
-                if self.local_path and keys_true(self.local_path, 'enable'):
+                if keys_true(self.local_path, 'enable') and not \
+                   self.base["chart"].startswith('P'):
                     key = CFkey if CFkey in self.lineages['Edges'] else FCkey
                     self.compile_pathlink(key, cdata)
 
@@ -3510,11 +3581,13 @@ class RelationsGraph(Report):
                 if self.base["chart"].capitalize() == 'Implex':
                     if childref.ref not in self.implex['Ind'].values():
                         continue
-
                     if self.implex['pathes']['enable']:
                         self.compile_pathlink(FCkey, cdata)
                     if self.implex['cycles']['enable']:
                         self.compile_cyclelink(child.gramps_id, family.gramps_id, cdata)
+                if self.base["chart"].capitalize() == 'Property':
+                    if self.pathes['enable']:
+                        self.compile_pathlink(FCkey, cdata)
 
                 # we're done -- add the link
                 write_endedge(cdata)
@@ -3550,6 +3623,9 @@ class RelationsGraph(Report):
             for key, value in self.include['descendantextra'].items():
                 if key not in local_people and key in self.people:
                     local_people[key] = self.people[key]['handle']
+        # check if we have Property
+        if self.base["chart"].capitalize() == 'Property':
+            local_people = self.people
 
         # loop through all the people we need to output
         local_sorted = sorted(local_people.keys(), key=lambda x: (local_people[x]['sort']))
@@ -3585,6 +3661,9 @@ class RelationsGraph(Report):
         if self.base["chart"].capitalize() == 'Implex':
             if keys_exists(self.implex, 'Fam'):
                 local_families = self.implex['Fam']
+        # check if we have Property
+        if self.base["chart"].capitalize() == 'Property':
+            local_families = self.families
 
         # loop through all the families we need to output
         for family_id in sorted(local_families):
@@ -3615,8 +3694,8 @@ class RelationsGraph(Report):
             node_cluster = []
             for key, value in self.nodecluster.items():
                 if key not in node_cluster:
-
-                    self.doc.start_subgraph(key)
+                    subgraph_id = key.replace('-', '_')   # '-' exist in Property IDs!
+                    self.doc.start_subgraph(subgraph_id)
                     for nr, value_id in enumerate(value):
                         family = self.database.get_family_from_gramps_id(value_id)
                         if family:
@@ -3640,13 +3719,16 @@ class RelationsGraph(Report):
             node_groups = []
             for key, value in self.nodegroup.items():
                 if key not in node_groups:
-                    if self.usesubgraphs: self.doc.start_subgraph(key)
+                    if self.usesubgraphs:
+                        subgraph_id = key.replace('-', '_')   # '-' exist in Property IDs!
+                        self.doc.start_subgraph(subgraph_id)
                     else: self.doc.write('edge[style=invis];\n')
 
                     for value_id in value[1:]:
                         self.doc.write('  "%s" -> "%s" [ style="invis" ];\n' % (value[0], value_id))
 
-                    if self.usesubgraphs: self.doc.end_subgraph()
+                    if self.usesubgraphs:
+                        self.doc.end_subgraph()
 
                     node_groups.append(key)
 
@@ -3660,6 +3742,9 @@ class RelationsGraph(Report):
         if self.base["chart"].capitalize() == 'Implex':
             if keys_exists(self.implex, 'Fam'):
                 local_families = self.implex['Fam']
+        # check if we have Property
+        if self.base["chart"].capitalize() == 'Property':
+            local_families = self.families
 
         # link the parents and children to the families
         for family_id in local_families:
@@ -3668,7 +3753,8 @@ class RelationsGraph(Report):
                 a = 1
 
             self.doc.add_comment('')
-            self.doc.start_subgraph(family_id)
+            subgraph_id = family_id.replace('-', '_')   # '-' exist in Property IDs!
+            self.doc.start_subgraph(subgraph_id)
 
             if self.noderotate and family_id in self.noderotate:
                 self.write_parentlink(family, 'MF')
