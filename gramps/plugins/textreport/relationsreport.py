@@ -12,7 +12,6 @@
 # Constants
 #
 #------------------------------------------------------------------------
-EMPTY_ENTRY = "_____________"
 HENRY = "123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 #------------------------------------------------------------------------
@@ -493,24 +492,6 @@ class RelationsReport (Report):
 
     #  ======================================================================================= #
     def write_report(self):
-        # Leere PIDs
-        """
-        for nr in range(16400):
-            pid = 'I' + str('%05i' % nr)
-            person = self.database.get_person_from_gramps_id(pid)
-            if not person:
-                print(pid)
-            else:
-                last_name = person.get_primary_name().get_surname()
-                if last_name == 'Dummy': print('%s - Dummy' % pid)
-        for nr in range(5000):
-            fid = 'F' + str('%04i' % nr)
-            family = self.database.get_family_from_gramps_id(fid)
-            if not family:
-                print(fid)
-        print('Fertig')
-        return
-        """
         if self.base['report'] == 'Ancestors':
             if self.base['result'] == 'Report' or self.base['result'] == 'All':
                 self.write_ancestors()
