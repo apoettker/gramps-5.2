@@ -1071,7 +1071,7 @@ class RelationsGraph(Report):
         # remember this person!
         self.generation[pid] = gen_no # lesser generation for Ancestors
 
-        if pid == 'I06789':
+        if pid == 'I21928':
             a = 1
 
         if pid not in self.parents:
@@ -1105,9 +1105,16 @@ class RelationsGraph(Report):
             family = self.database.get_family_from_handle(family_handle)
             if family:
                 family_id = family.gramps_id
+                if family_id[0] == 'P':
+                    a = 1
+                if keys_true(self.include, 'property', 'enable') and \
+                   family_id.startswith('F'): continue
+                if keys_false(self.include, 'property', 'enable') and \
+                   family_id.startswith('P'): continue
+
                 if family_id in self.include['unfidlist']: continue
 
-                if family_id == 'F2018': # 'F1737':
+                if family_id == 'F5900': # 'F1737':
                     a = 1
 
                 # Family between parents and children generation
@@ -1150,6 +1157,10 @@ class RelationsGraph(Report):
             family = self.database.get_family_from_handle(family_handle)
             if family:
                 family_id = family.gramps_id
+                if keys_true(self.include, 'property', 'enable') and \
+                   family_id.startswith('F'): continue
+                if keys_false(self.include, 'property', 'enable') and \
+                   family_id.startswith('P'): continue
                 if family_id in self.include['unfidlist']: continue
 
                 # Family between parents and children generation
@@ -2325,7 +2336,7 @@ class RelationsGraph(Report):
         generation = self.generation[pid]
 
         if pid in self.generation and generation in self.generation.values():
-            if generation < self.color["shiftgeneration"]:   # Ancestors
+            if generation < self.color['shiftgeneration']:   # Ancestors
                 if surname in self.color["ancestor"]:
                     node['fillcolor'], font_color = self.color["ancestor"][surname][0], self.color["ancestor"][surname][1]
                     if self.color["style"]["value"] > 0:
@@ -2978,15 +2989,18 @@ class RelationsGraph(Report):
 
         # figure out the number of children (if any)
         children_str = None
-        property_id = self.include['property']['pidlist'][0]
         if (keys_true(self.include, 'ancestorfamily', 'childscount') and self.families[family_id]['type'] == 'A') or \
            (keys_true(self.include, 'probandfamily','childscount') and self.families[family_id]['type'] == 'P') or \
            (keys_true(self.include, 'descendantfamily', 'childscount') and self.families[family_id]['type'] == 'D') or \
            (keys_true(self.include, 'descendantspouseparents', 'childscount') and self.families[family_id]['type'] == 'SP'):
+            child_count = len(family.get_child_ref_list())
+            children_str = self.ngettext("{number_of} child", "{number_of} children", \
+                                         child_count).format(number_of=child_count)
+        """
+        if keys_true(self.include, 'property', 'enable'):
+            property_id = self.include['property']['pidlist'][0]
             if not property_id in family.gramps_id.split('-')[0]:
-                child_count = len(family.get_child_ref_list())
-                children_str = self.ngettext("{number_of} child", "{number_of} children", \
-                                             child_count).format(number_of=child_count)
+        """
 
         # see if we have biological relationship
         gb_exist, gb_str, gsb_str = self.include_family_VG(family, 2)

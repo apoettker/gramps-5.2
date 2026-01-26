@@ -450,3 +450,26 @@ plg.category = CATEGORY_TEXT
 plg.reportclass = "NoteLinkReport"
 plg.optionclass = "NoteLinkOptions"
 plg.report_modes = [REPORT_MODE_GUI, REPORT_MODE_CLI, REPORT_MODE_BKI]
+
+#------------------------------------------------------------------------
+#
+# Relations Report
+#
+#------------------------------------------------------------------------
+
+plg = newplugin()
+plg.id = 'relations_report'
+plg.name = _("Relations Report")
+plg.description = _("Provide Relationship Report")
+plg.version = '1.0'
+plg.gramps_target_version = MODULE_VERSION
+plg.status = STABLE
+plg.fname = 'relationsreport.py'
+plg.ptype = REPORT
+plg.authors = []
+plg.authors_email = []
+plg.category = CATEGORY_TEXT
+plg.reportclass = 'RelationsReport'
+plg.optionclass = 'RelationsReportOptions'
+plg.report_modes = [REPORT_MODE_CLI]
+

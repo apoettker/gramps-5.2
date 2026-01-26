@@ -45,6 +45,7 @@ from ...datehandler import get_date
 from ...display.place import displayer as _pd
 from ...utils.file import media_path_full
 from ..docgen import IndexMark, INDEX_TYPE_ALP
+from gramps.gen.lib import EventType
 
 
 # _T_ is a gramps-defined keyword -- see po/update_po.py and po/genpot.sh
@@ -208,7 +209,9 @@ def find_marriage(database, family):
     """find the marriage of a family"""
     for event_ref in family.get_event_ref_list():
         event = database.get_event_from_handle(event_ref.ref)
-        if event and event.type.is_marriage() and event_ref.role.is_family():
+        if event and \
+           (event.type.is_marriage() and event_ref.role.is_family()) or \
+           (event.type == EventType.CUSTOM and event.type.string == 'Trauung'):
             return event
     return None
 
