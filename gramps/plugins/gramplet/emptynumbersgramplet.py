@@ -193,12 +193,13 @@ class PersonEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
         while data:
             last_name = ''
             (handle, val) = data
-            if val[3] and val[3][5] and val[3][5][0]:
-                last_name = val[3][5][0][0]
-                if last_name == 'Dummy':
-                    obj = {'gid': val[1], 'handle': handle}
-                    self.obj_dict['dummy'].append(obj)
-            self.obj_list.append(int(val[1][1:]))
+            if val[1][1:].isdigit():
+                if val[3] and val[3][5] and val[3][5][0]:
+                    last_name = val[3][5][0][0]
+                    if last_name == 'Dummy':
+                        obj = {'gid': val[1], 'handle': handle}
+                        self.obj_dict['dummy'].append(obj)
+                self.obj_list.append(int(val[1][1:]))
             data = next(cursor)
         cursor.close()
         self.obj_list.sort()
@@ -288,7 +289,8 @@ class FamilyEmptyNumbersFilter(EmptyNumberList, SidebarFilter):
         data = next(cursor)
         while data:
             (handle, val) = data
-            self.obj_list.append(int(val[1][1:]))
+            if not '-' in val[1]:
+                self.obj_list.append(int(val[1][1:]))
             data = next(cursor)
         cursor.close()
         self.obj_list.sort()

@@ -32,8 +32,9 @@ _ = glocale.translation.gettext
 from gramps.gen.config import config
 
 from gramps.gen.display.name import displayer as global_name_display
+from gramps.gen.errors import ReportError
 
-from gramps.gen.lib import Person  # EventType, FamilyRelType
+from gramps.gen.lib import Person
 
 from gramps.gen.plug.menu import StringOption
 from gramps.gen.plug.report import ( Report, Bibliography )
@@ -73,6 +74,16 @@ class RelationsReport (Report):
         bibliography = Bibliography(Bibliography.MODE_DATE|Bibliography.MODE_PAGE)
         self.bibliography = bibliography
 
+        options.handle_map = self.handle_map = {}
+        options.index_map = self.index_map = {}
+        options.line_map = self.line_map = []
+        options.path_map = self.path_map = {}
+        options.gen_keys = self.gen_keys = []
+
+        self.center_person = database.get_person_from_gramps_id(self.base['pid'])
+        if (self.center_person == None) :
+            raise ReportError(_("Person %s is not in database") % self.base['pid'])
+
         self.RelRep = TextReport(bibliography, database, options)
 
         menu = options.menu
@@ -89,7 +100,7 @@ class RelationsReport (Report):
                                            options.include['person']['callnames'], options.base['full_dates'],
                                            options.base['empty_date'], options.base['empty_place'],
                                            nlocale=self.RelRep._locale,
-                                           get_endnote_numbers=self.RelRep.endnotes)
+                                           get_endnote_numbers=self.RelRep.add_citations)
         # Allgemein
         self.RelRep._ = self._
         self.local_init(self.options)
@@ -100,6 +111,7 @@ class RelationsReport (Report):
         for nid in options.base['unpid_list']:
             person = self.database.get_person_from_gramps_id(nid)
             if person: self.unpid_set.add(person.gramps_id)
+        """
         for nid in options.base['undesendant_list']:
             if 'F' in nid:
                 family = self.database.get_family_from_gramps_id(nid)
@@ -111,7 +123,7 @@ class RelationsReport (Report):
             if 'I' in nid:
                 person = self.database.get_person_from_gramps_id(nid)
                 if person: self.unpid_set.add(person.gramps_id)
-
+        """
         config.set('preferences.name-format', 2)   # 2: First Name, Last name
         config.set('preferences.date-format', 5)   # 5:
         config.set('preferences.place-auto', False)   # Place Title
@@ -127,6 +139,10 @@ class RelationsReport (Report):
             'report': '',   # All, Anchestors, Descendants
             'result': '',   # All, Report, Lifeline, References, EndOfLine
             'result_path': '',
+
+            "citation_substitution_path": '',
+            "citation_substitution_file": '',
+            "citation_source_file": '',
 
             "pid": '',
             "unpid_list": [],
@@ -154,6 +170,7 @@ class RelationsReport (Report):
                 "enable": True,
                 'altnames': False,
                 'callnames':  True,   # get_value('usecall')
+                'groupnames': False,
                 'notes': True,   # get_value('incnotes')
                 'passport': False,   # get_value('incphotos')
                 'passport_generation': 8,
@@ -212,16 +229,16 @@ class RelationsReport (Report):
     def apply_kekule_filter(self, index_neu, handle_neu, index_alt=0):
 
         if (not handle_neu) or \
-           (index_neu > 2**self.RelRep.max_generation):
+           (index_neu > 2**self.base['max_generation']):
             return
 
-        self.RelRep.handle_map[index_neu] = handle_neu
-        self.RelRep.index_map[handle_neu] = index_neu
-        self.RelRep.path_map[index_neu] = [handle_neu, []]
+        self.handle_map[index_neu] = handle_neu
+        self.index_map[handle_neu] = index_neu
+        self.path_map[index_neu] = [handle_neu, []]
         if index_alt > 0:
-            path = self.RelRep.path_map[index_alt][1].copy()
-            path.insert(0, self.RelRep.path_map[index_alt][0])
-            self.RelRep.path_map[index_neu][1] = path
+            path = self.path_map[index_alt][1].copy()
+            path.insert(0, self.path_map[index_alt][0])
+            self.path_map[index_neu][1] = path
 
         person = self.database.get_person_from_handle(handle_neu)
         # Check for 'Stop' tags
@@ -245,7 +262,7 @@ class RelationsReport (Report):
 
         print('Initial ...')
         self.RelRep.mode['part'] = 'P'   # P-erson
-        self.apply_kekule_filter(1, self.RelRep.center_person.get_handle())
+        self.apply_kekule_filter(1, self.center_person.get_handle())
         self.RelRep.doc_handle = open(self.RelRep.doc_file, 'w')
 
         self.RelRep.min_generation = 1   # Control reg. Citations
@@ -253,7 +270,7 @@ class RelationsReport (Report):
         self.RelRep.stoptag = False
         print ('Generation %s ...' % self.RelRep.min_generation)
 
-        for key in sorted(self.RelRep.handle_map):
+        for key in sorted(self.handle_map):
             if key == 1: continue   # Generation 0: Proband (not used)
 
             if key >= 2**self.RelRep.act_generation:
@@ -273,21 +290,14 @@ class RelationsReport (Report):
                 pre_act_generation = 'unmittelbaren' if self.RelRep.act_generation < 4 else 'alternativen'
                 roman_act_generation = ReportUtils.roman(self.RelRep.act_generation).upper()
                 name_act_generation = name_generation[self.RelRep.act_generation]
-                self.RelRep.doc_handle.write(u'\%sesetGenerationNG{section}[%s]{%s}{%s}\n' % \
+                self.RelRep.doc_handle.write(u'\%sesetGeneration{boldsection}[%s]{%s}{%s}\n' % \
                                              ('r', pre_act_generation, roman_act_generation, name_act_generation))
-                """
-                self.RelRep.doc_handle.write(u'\%sitlesectionlined\n' % 't')
-                self.RelRep.doc_handle.write('\section[Generation %s --- ???]{Generation %s}\n\n' % \
-                    (roman_act_generation, roman_act_generation))
-                self.RelRep.doc_handle.write(u'\%sitlesubsectiondotted\n\n' % 't')
-                self.RelRep.apply_divider('-','\n')
-                """
                 self.RelRep.act_generation += 1
                 # if self.childref:
                 #     self.prev_gen_handles = self.gen_handles.copy()
                 #     self.gen_handles.clear()
 
-            person_handle = self.RelRep.handle_map[key]
+            person_handle = self.handle_map[key]
             person = self.database.get_person_from_handle(person_handle)
             # self.gen_handles[person_handle] = key
 
@@ -301,13 +311,13 @@ class RelationsReport (Report):
                 father_handle = family.get_father_handle()
                 mother_handle = family.get_mother_handle()
 
-                if ((father_handle and father_handle not in iter(self.RelRep.handle_map.values())) or
-                    (mother_handle and mother_handle not in iter(self.RelRep.handle_map.values()))):
+                if ((father_handle and father_handle not in iter(self.handle_map.values())) or
+                    (mother_handle and mother_handle not in iter(self.handle_map.values()))):
                     if self.include['mate']['enable']:
                         self.RelRep.write_mate(person, family)
 
                 if (mother_handle is None or
-                    (mother_handle not in iter(self.RelRep.handle_map.values())) or
+                    (mother_handle not in iter(self.handle_map.values())) or
                     (person.get_gender() == Person.FEMALE)):
                     # The second test above also covers the 1. person's
                     # mates, which is not an ancestor and as such is not
@@ -336,7 +346,7 @@ class RelationsReport (Report):
     def apply_henry_filter(self, index_neu, handle_neu, index_alt, pid, cur_gen=0):
         """"""
         # max_gen +1 wg. genealogischer Nummer
-        if (not handle_neu) or (cur_gen > (self.RelRep.max_generation +1)):   # +1: get children of last generation
+        if (not handle_neu) or (cur_gen > (self.base['max_generation'] +1)):   # +1: get children of last generation
             return
 
         # nur erwünschte ID's!
@@ -344,26 +354,26 @@ class RelationsReport (Report):
         if person.gramps_id in self.unpid_set:
             return
 
-        self.RelRep.index_map[handle_neu] = pid
-        self.RelRep.handle_map[index_neu] = handle_neu
-        self.RelRep.path_map[index_neu] = [handle_neu, []]
+        self.index_map[handle_neu] = pid
+        self.handle_map[index_neu] = handle_neu
+        self.path_map[index_neu] = [handle_neu, []]
         if index_alt > 0:
-            path = self.RelRep.path_map[index_alt][1].copy()
-            path.insert(0, self.RelRep.path_map[index_alt][0])
-            self.RelRep.path_map[index_neu][1] = path
+            path = self.path_map[index_alt][1].copy()
+            path.insert(0, self.path_map[index_alt][0])
+            self.path_map[index_neu][1] = path
 
-        if len(self.RelRep.gen_keys) < cur_gen +1:
-            self.RelRep.gen_keys.append([index_neu])
+        if len(self.gen_keys) < cur_gen +1:
+            self.gen_keys.append([index_neu])
         else:
-            self.RelRep.gen_keys[cur_gen].append(index_neu)
+            self.gen_keys[cur_gen].append(index_neu)
 
         index_neu = 0
         person = self.database.get_person_from_handle(handle_neu)
-        self.RelRep.line_map.append([pid, handle_neu, person.gender])
+        self.line_map.append([pid, handle_neu, person.gender])
         for family_handle in person.get_family_handle_list():
             family = self.database.get_family_from_handle(family_handle)
             for child_ref in family.get_child_ref_list():
-                index = max(self.RelRep.handle_map)
+                index = max(self.handle_map)
                 self.apply_henry_filter(index +1, child_ref.ref, index_neu,
                                   pid + HENRY[index_neu], cur_gen +1)
                 index_neu += 1
@@ -371,23 +381,23 @@ class RelationsReport (Report):
     # Filter for d'Aboville numbering
     def apply_daboville_filter(self, person_handle, index, pid, cur_gen=1):
 
-        if (not person_handle) or (cur_gen > self.RelRep.max_generation):
+        if (not person_handle) or (cur_gen > self.base['max_generation']):
             return
 
         self.RelRep.dnumber[person_handle] = pid
-        self.RelRep.handle_map[index] = person_handle
+        self.handle_map[index] = person_handle
 
-        if len(self.RelRep.gen_keys) < cur_gen:
-            self.RelRep.gen_keys.append([index])
+        if len(self.gen_keys) < cur_gen:
+            self.gen_keys.append([index])
         else:
-            self.RelRep.gen_keys[cur_gen-1].append(index)
+            self.gen_keys[cur_gen-1].append(index)
 
         person = self.database.get_person_from_handle(person_handle)
         index = 1
         for family_handle in person.get_family_handle_list():
             family = self.database.get_family_from_handle(family_handle)
             for child_ref in family.get_child_ref_list():
-                ix = max(self.RelRep.handle_map)
+                ix = max(self.handle_map)
                 self.apply_daboville_filter(child_ref.ref, ix+1,
                                   pid+"."+str(index), cur_gen+1)
                 index += 1
@@ -395,22 +405,22 @@ class RelationsReport (Report):
     # Filter for Record-style (Modified Register) numbering
     def apply_mod_reg_filter_aux(self, person_handle, index, cur_gen=1):
         """"""
-        if (not person_handle) or (cur_gen > self.RelRep.max_generation):
+        if (not person_handle) or (cur_gen > self.base['max_generation']):
             return
 
-        self.RelRep.handle_map[index] = person_handle
+        self.handle_map[index] = person_handle
 
-        if len(self.RelRep.gen_keys) < cur_gen:
-            self.RelRep.gen_keys.append([index])
+        if len(self.gen_keys) < cur_gen:
+            self.gen_keys.append([index])
         else:
-            self.RelRep.gen_keys[cur_gen -1].append(index)
+            self.gen_keys[cur_gen -1].append(index)
 
         person = self.database.get_person_from_handle(person_handle)
 
         for family_handle in person.get_family_handle_list():
             family = self.database.get_family_from_handle(family_handle)
             for child_ref in family.get_child_ref_list():
-                ix = max(self.RelRep.handle_map)
+                ix = max(self.handle_map)
                 self.apply_mod_reg_filter_aux(child_ref.ref, ix +1, cur_gen +1)
 
 
@@ -418,9 +428,9 @@ class RelationsReport (Report):
         """"""
         self.apply_mod_reg_filter_aux(person_handle, 1, 1)
         mod_reg_number = 1
-        for generation in range(len(self.RelRep.gen_keys)):
-            for key in self.RelRep.gen_keys[generation]:
-                person_handle = self.RelRep.handle_map[key]
+        for generation in range(len(self.gen_keys)):
+            for key in self.gen_keys[generation]:
+                person_handle = self.handle_map[key]
                 if person_handle not in self.RelRep.dnumber:
                     self.RelRep.dnumber[person_handle] = mod_reg_number
                     mod_reg_number += 1
@@ -431,7 +441,7 @@ class RelationsReport (Report):
         """
         name_generation = {
             1: 'Kinder', 2: 'Enkel', 3: 'Urenkel',
-            4: 'Ur\textsup{{\sfseries x}~2}enkel', 5: 'Ur\textsup{{\sfseries x}~3}enkel', 6: 'Ur\textsup{{\sfseries x}~4}enkel',
+            4: 'Ur\\textsup{{\\sfseries x}~2}enkel', 5: 'Ur\\textsup{{\\sfseries x}~3}enkel', 6: 'Ur\\textsup{{\\sfseries x}~4}enkel',
         }
 
         print('Initial ...')
@@ -439,11 +449,11 @@ class RelationsReport (Report):
         self.RelRep.doc_handle = open(self.RelRep.doc_file, 'w')
         numbering = "Henry"
         if numbering == "Henry":
-            self.apply_henry_filter(1, self.RelRep.center_person.get_handle(), 0, "1")
+            self.apply_henry_filter(1, self.center_person.get_handle(), 0, "1")
         elif numbering == "d'Aboville":
-            self.apply_daboville_filter(1, self.RelRep.center_person.get_handle(), 0, "1")
+            self.apply_daboville_filter(1, self.center_person.get_handle(), 0, "1")
         elif numbering == "Record (Modified Register)":
-            self.apply_mod_reg_filter(1, self.RelRep.center_person.get_handle(), 0)
+            self.apply_mod_reg_filter(1, self.center_person.get_handle(), 0)
         else:
             raise AttributeError("no such numbering: '%s'" % numbering)
 
@@ -452,8 +462,8 @@ class RelationsReport (Report):
         self.RelRep.doc_handle.write('\\chapter{Nachkommenliste}\n')
 
         self.RelRep.numbers_printed = list()
-        for self.RelRep.act_generation in range(0, len(self.RelRep.gen_keys)):
-            if self.RelRep.act_generation > self.RelRep.max_generation:
+        for self.RelRep.act_generation in range(0, len(self.gen_keys)):
+            if self.RelRep.act_generation > self.base['max_generation']:
                 return
 
             if self.RelRep.act_generation > 0:
@@ -471,7 +481,7 @@ class RelationsReport (Report):
 
                 roman_act_generation = ReportUtils.roman(self.RelRep.act_generation).upper()
                 name_act_generation = name_generation[self.RelRep.act_generation]
-                self.RelRep.doc_handle.write(u'\%sesetGenerationNG{section}{%s}{%s}\n' % \
+                self.RelRep.doc_handle.write(u'\%sesetGeneration{boldsection}{%s}{%s}\n' % \
                                             ('r', roman_act_generation, name_act_generation))
                 self.RelRep.apply_divider('-','\n')
             """
@@ -479,8 +489,8 @@ class RelationsReport (Report):
                 self.prev_gen_handles = self.gen_handles.copy()
                 self.gen_handles.clear()
             """
-            for key in self.RelRep.gen_keys[self.RelRep.act_generation]:
-                person_handle = self.RelRep.handle_map[key]
+            for key in self.gen_keys[self.RelRep.act_generation]:
+                person_handle = self.handle_map[key]
                 # self.gen_handles[person_handle] = key
 
                 self.RelRep.write_person(person_handle)
@@ -493,25 +503,61 @@ class RelationsReport (Report):
     #  ======================================================================================= #
     def write_report(self):
         if self.base['report'] == 'Ancestors':
+            if self.base['result'] == 'Sources':
+                from gramps.plugins.moduleAP.sources import SourcesReport
+
+                Sources = SourcesReport(self.database, self.bibliography, self.doc, self.options)
+                """
+                print ('Substitution ...')   # Substitution file for Sources
+                Sources.write_substitution()
+                """
+                print ('Sources ...')   #  Source file for Sources
+                Sources.read_sources()
+                Sources.write_citations()
+
             if self.base['result'] == 'Report' or self.base['result'] == 'All':
+                from gramps.plugins.moduleAP.sources import SourcesReport
+
+                print ('Substitution ...')   # Substitution file for Sources
+                Sources = SourcesReport(self.database, self.bibliography, self.doc, self.options)
+                self.RelRep.cit_substitution_dict = Sources.read_substitution()
+
+                print ('Anchestors ...')   # Active persons file for Anchestors
                 self.write_ancestors()
+                Sources.write_sources()
 
                 print ('References ...')   # Referencend persons file for Anchestors
                 self.RelRep.act_generation = 1
-                self.RelRep.write_refperson('A')
+                # self.RelRep.write_refperson()
 
-                print ('Citations ...')
-                self.RelRep.write_endnotes(self.bibliography, self.database, self.doc)
+                print ('Sourcess ...')   #  Sources file for Anchestors
+                Sources.read_sources()
+                Sources.write_citations()
 
             if self.base['result'] == 'Index' or self.base['result'] == 'All':
+                from gramps.plugins.moduleAP.indices import IndexReport
+
                 print ('Index ...')
-                self.apply_kekule_filter(1, self.RelRep.center_person.get_handle())
-                self.RelRep.write_index('A')   # Index file for Anchestors
+                self.options.gen_keys = self.gen_keys
+                self.options.index_map = self.index_map
+                self.options.handle_map = self.handle_map
+                index = IndexReport(self.database, self.options)
+
+                self.apply_kekule_filter(1, self.center_person.get_handle())
+                index.write_index('A')   # Index file for Anchestors
 
             if self.base['result'] == 'Lifeline' or self.base['result'] == 'All':
+                from gramps.plugins.moduleAP.lifeline import LifeLineReport
+
                 print ('Lifeline ...')
-                self.apply_kekule_filter(1, self.RelRep.center_person.get_handle())
-                self.RelRep.write_lifeline('A')   # Lifeline file for Anchestors
+                self.options.gen_keys = self.gen_keys
+                self.options.index_map = self.index_map
+                self.options.handle_map = self.handle_map
+                lifeline = LifeLineReport(self.database, self.options)
+
+                self.apply_kekule_filter(1, self.center_person.get_handle())
+                # lifeline.write('A')   # Lifeline file for Anchestors
+                lifeline.write_YM('A')   # Y/M Lifeline file for Anchestors
 
             if self.base['result'] == 'EndOfLine' or self.base['result'] == 'All':
                 from gramps.plugins.moduleAP.endofline import EndOfLineReport
@@ -522,6 +568,7 @@ class RelationsReport (Report):
 
         if self.base['report'] == 'Descendants':
             if self.base['result'] == 'Report' or self.base['result'] == 'All':
+                print ('Descendants ...')
                 self.write_descendants()
 
                 print ('References ...')
@@ -529,15 +576,7 @@ class RelationsReport (Report):
                 self.RelRep.write_refperson('D')   # Referencend persons file for Anchestors
 
                 print ('Citations ...')
-                self.RelRep.write_endnotes(self.bibliography, self.database, self.doc)
-
-            if self.base['result'] == 'Index' or self.base['result'] == 'All':
-                print ('Index ...')
-                self.RelRep.write_index('D')   # Index file for Anchestors
-
-            if self.base['result'] == 'Lifeline' or self.base['result'] == 'All':
-                print ('Lifeline ...')
-                self.RelRep.write_lifeline('D')   # Lifeline file for Anchestors
+                self.RelRep.write_citations(self.database, self.bibliography)
 
 #------------------------------------------------------------------------
 #

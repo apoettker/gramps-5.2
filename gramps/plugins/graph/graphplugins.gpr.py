@@ -112,4 +112,3 @@ plg.category = CATEGORY_GRAPHVIZ
 plg.reportclass = "RelationsGraph"
 plg.optionclass = "RelationsGraphOptions"
 plg.report_modes = [REPORT_MODE_GUI, REPORT_MODE_CLI]
-

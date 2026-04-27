@@ -712,7 +712,7 @@ class GVDocBase(BaseDoc, GVDoc):
         graph_id = graph_id.replace(' ', '_')  # for user-defined ID with space
         graph_id = graph_id.replace('.', '_')  # for user-defined ID with space
         self.write(
-            "  subgraph cluster_%s\n" % graph_id + "  {\n" + '  style="invis";\n'
+            "  subgraph cluster_%s\n" % graph_id + "  {\n" + '  ordering=out; style="invis";\n'
         )  # no border around subgraph (#0002176)
 
     def end_subgraph(self):
