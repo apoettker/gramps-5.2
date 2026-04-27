@@ -536,3 +536,26 @@ register(
     optionclass="RemoveSpacesOptions",
     tool_modes=[TOOL_MODE_GUI],
 )
+
+#------------------------------------------------------------------------
+#
+# Complete Objects
+#
+#------------------------------------------------------------------------
+
+register(TOOL,
+    id    = 'complete_objects',
+    name  = _("Complete Objects"),
+    description =  _("Searches the entire database, looking for "
+                     "objects out of GEDCOM / ProGen imports and correct data"),
+    version = '1.0',
+    gramps_target_version = MODULE_VERSION,
+    status = STABLE,
+    fname = 'completeobjects.py',
+    authors = ["Dr. Alois Poettker"],
+    authors_email = ["alois.poettker@gmx.de"],
+    category = TOOL_DBPROC,
+    toolclass = 'CompleteObjects',
+    optionclass = 'CompleteObjectsOptions',
+    tool_modes = [TOOL_MODE_CLI]
+)

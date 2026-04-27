@@ -2217,12 +2217,12 @@ msgstr "Januar"
 #: ../gramps/gen/const.py:288
 msgctxt "surname"
 msgid "none"
-msgstr "kein"
+msgstr "kein(e)"
 
 #: ../gramps/gen/const.py:289
 msgctxt "given-name"
 msgid "none"
-msgstr "kein"
+msgstr "kein(e)"
 
 #: ../gramps/gen/const.py:293 ../gramps/plugins/gramplet/todo.py:208
 #: ../gramps/plugins/webreport/basepage.py:227
@@ -3100,7 +3100,7 @@ msgstr "um "
 #: ../gramps/gen/datehandler/_datestrings.py:255
 msgctxt "date modifier"
 msgid "from "
-msgstr "ab "
+msgstr "von "
 
 #. Translators: if the modifier is after the date
 #. put the space ahead of the word instead of after it
@@ -11319,7 +11319,7 @@ msgstr "unbekannt"
 #: ../gramps/gui/filters/sidebar/_personsidebarfilter.py:112
 msgctxt "gender"
 msgid "other"
-msgstr "divers"
+msgstr "andere"
 
 #: ../gramps/gen/utils/string.py:58
 msgid "Invalid"
@@ -27990,8 +27990,8 @@ msgid ""
 "%(unknown_gender_name)s died on %(death_date)s in %(death_place)s at the age "
 "of %(age)s."
 msgstr ""
-"%(unknown_gender_name)s starb am %(death_date)s in %(death_place)s, %(age)s "
-"alt."
+"%(unknown_gender_name)s starb am %(death_date)s in %(death_place)s im Alter "
+"von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:232
 #, python-format
@@ -28003,7 +28003,7 @@ msgstr "%(male_name)s starb am %(death_date)s in %(death_place)s."
 msgid ""
 "%(male_name)s died on %(death_date)s in %(death_place)s at the age of "
 "%(age)s."
-msgstr "%(male_name)s starb am %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "%(male_name)s starb am %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:238
 #, python-format
@@ -28016,7 +28016,7 @@ msgid ""
 "%(female_name)s died on %(death_date)s in %(death_place)s at the age of "
 "%(age)s."
 msgstr ""
-"%(female_name)s starb am %(death_date)s in %(death_place)s, %(age)s alt."
+"%(female_name)s starb am %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:246
 #, python-format
@@ -28027,7 +28027,7 @@ msgstr "Diese Person starb am %(death_date)s in %(death_place)s."
 #, python-format
 msgid ""
 "This person died on %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Die Person starb am %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Die Person starb am %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:252
 #, python-format
@@ -28037,7 +28037,7 @@ msgstr "Er starb am %(death_date)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:253
 #, python-format
 msgid "He died on %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Er starb am %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Er starb am %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:256
 #, python-format
@@ -28047,7 +28047,7 @@ msgstr "Sie starb am %(death_date)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:257
 #, python-format
 msgid "She died on %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Sie starb am %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Sie starb am %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:261
 #: ../gramps/plugins/lib/libnarrate.py:304
@@ -28072,7 +28072,7 @@ msgid ""
 "%(unknown_gender_name)s died %(death_date)s in %(death_place)s at the age of "
 "%(age)s."
 msgstr ""
-"%(unknown_gender_name)s starb %(death_date)s in %(death_place)s, %(age)s alt."
+"%(unknown_gender_name)s starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:275
 #, python-format
@@ -28083,7 +28083,7 @@ msgstr "%(male_name)s starb %(death_date)s in %(death_place)s."
 #, python-format
 msgid ""
 "%(male_name)s died %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "%(male_name)s starb %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "%(male_name)s starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:281
 #, python-format
@@ -28094,7 +28094,7 @@ msgstr "%(female_name)s starb %(death_date)s in %(death_place)s."
 #, python-format
 msgid ""
 "%(female_name)s died %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "%(female_name)s starb %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "%(female_name)s starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:289
 #, python-format
@@ -28105,7 +28105,7 @@ msgstr "Diese Person starb %(death_date)s in %(death_place)s."
 #, python-format
 msgid ""
 "This person died %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Diese Person starb %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Diese Person starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:295
 #, python-format
@@ -28115,7 +28115,7 @@ msgstr "Er starb %(death_date)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:296
 #, python-format
 msgid "He died %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Er starb %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Er starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:299
 #, python-format
@@ -28125,7 +28125,7 @@ msgstr "Sie starb %(death_date)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:300
 #, python-format
 msgid "She died %(death_date)s in %(death_place)s at the age of %(age)s."
-msgstr "Sie starb %(death_date)s in %(death_place)s, %(age)s alt."
+msgstr "Sie starb %(death_date)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:312
 #, python-format
@@ -28135,7 +28135,7 @@ msgstr "%(unknown_gender_name)s starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:313
 #, python-format
 msgid "%(unknown_gender_name)s died on %(death_date)s at the age of %(age)s."
-msgstr "%(unknown_gender_name)s starb am %(death_date)s, %(age)s alt."
+msgstr "%(unknown_gender_name)s starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:316
 #, python-format
@@ -28145,7 +28145,7 @@ msgstr "%(male_name)s starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:317
 #, python-format
 msgid "%(male_name)s died on %(death_date)s at the age of %(age)s."
-msgstr "%(male_name)s starb am %(death_date)s, %(age)s alt."
+msgstr "%(male_name)s starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:320
 #, python-format
@@ -28155,7 +28155,7 @@ msgstr "%(female_name)s starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:321
 #, python-format
 msgid "%(female_name)s died on %(death_date)s at the age of %(age)s."
-msgstr "%(female_name)s starb am %(death_date)s, %(age)s alt."
+msgstr "%(female_name)s starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:326
 #, python-format
@@ -28165,7 +28165,7 @@ msgstr "Die Person starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:327
 #, python-format
 msgid "This person died on %(death_date)s at the age of %(age)s."
-msgstr "Die Person starb am %(death_date)s, %(age)s alt."
+msgstr "Die Person starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:330
 #, python-format
@@ -28175,7 +28175,7 @@ msgstr "Er starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:331
 #, python-format
 msgid "He died on %(death_date)s at the age of %(age)s."
-msgstr "Er starb am %(death_date)s, %(age)s alt."
+msgstr "Er starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:334
 #, python-format
@@ -28185,7 +28185,7 @@ msgstr "Sie starb am %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:335
 #, python-format
 msgid "She died on %(death_date)s at the age of %(age)s."
-msgstr "Sie starb am %(death_date)s, %(age)s alt."
+msgstr "Sie starb am %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:339
 #: ../gramps/plugins/lib/libnarrate.py:374
@@ -28209,7 +28209,7 @@ msgstr "%(unknown_gender_name)s starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:348
 #, python-format
 msgid "%(unknown_gender_name)s died %(death_date)s at the age of %(age)s."
-msgstr "%(unknown_gender_name)s starb %(death_date)s, %(age)s alt."
+msgstr "%(unknown_gender_name)s starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:351
 #, python-format
@@ -28219,7 +28219,7 @@ msgstr "%(male_name)s starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:352
 #, python-format
 msgid "%(male_name)s died %(death_date)s at the age of %(age)s."
-msgstr "%(male_name)s starb %(death_date)s, %(age)s alt."
+msgstr "%(male_name)s starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:355
 #, python-format
@@ -28229,7 +28229,7 @@ msgstr "%(female_name)s starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:356
 #, python-format
 msgid "%(female_name)s died %(death_date)s at the age of %(age)s."
-msgstr "%(female_name)s starb %(death_date)s, %(age)s alt."
+msgstr "%(female_name)s starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:361
 #, python-format
@@ -28239,7 +28239,7 @@ msgstr "Diese Person starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:362
 #, python-format
 msgid "This person died %(death_date)s at the age of %(age)s."
-msgstr "Diese Person starb %(death_date)s, %(age)s alt."
+msgstr "Diese Person starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:365
 #, python-format
@@ -28249,7 +28249,7 @@ msgstr "Er starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:366
 #, python-format
 msgid "He died %(death_date)s at the age of %(age)s."
-msgstr "Er starb %(death_date)s, %(age)s alt."
+msgstr "Er starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:369
 #, python-format
@@ -28259,7 +28259,7 @@ msgstr "Sie starb %(death_date)s."
 #: ../gramps/plugins/lib/libnarrate.py:370
 #, python-format
 msgid "She died %(death_date)s at the age of %(age)s."
-msgstr "Sie starb %(death_date)s, %(age)s alt."
+msgstr "Sie starb %(death_date)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:382
 #, python-format
@@ -28272,8 +28272,8 @@ msgid ""
 "%(unknown_gender_name)s died in %(month_year)s in %(death_place)s at the age "
 "of %(age)s."
 msgstr ""
-"%(unknown_gender_name)s starb im %(month_year)s in %(death_place)s, %(age)s "
-"alt."
+"%(unknown_gender_name)s starb im %(month_year)s in %(death_place)s im Alter "
+"von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:388
 #, python-format
@@ -28285,7 +28285,7 @@ msgstr "%(male_name)s starb im %(month_year)s in %(death_place)s."
 msgid ""
 "%(male_name)s died in %(month_year)s in %(death_place)s at the age of "
 "%(age)s."
-msgstr "%(male_name)s starb im %(month_year)s in %(death_place)s, %(age)s alt."
+msgstr "%(male_name)s starb im %(month_year)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:394
 #, python-format
@@ -28298,7 +28298,7 @@ msgid ""
 "%(female_name)s died in %(month_year)s in %(death_place)s at the age of "
 "%(age)s."
 msgstr ""
-"%(female_name)s starb im %(month_year)s in %(death_place)s, %(age)s alt."
+"%(female_name)s starb im %(month_year)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:402
 #, python-format
@@ -28309,7 +28309,7 @@ msgstr "Diese Person starb im %(month_year)s in %(death_place)s."
 #, python-format
 msgid ""
 "This person died in %(month_year)s in %(death_place)s at the age of %(age)s."
-msgstr "Diese Person starb im %(month_year)s in %(death_place)s, %(age)s alt."
+msgstr "Diese Person starb im %(month_year)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:408
 #, python-format
@@ -28319,7 +28319,7 @@ msgstr "Er starb im %(month_year)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:409
 #, python-format
 msgid "He died in %(month_year)s in %(death_place)s at the age of %(age)s."
-msgstr "Er starb im %(month_year)s in %(death_place)s, %(age)s alt."
+msgstr "Er starb im %(month_year)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:412
 #, python-format
@@ -28329,7 +28329,7 @@ msgstr "Sie starb im %(month_year)s in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:413
 #, python-format
 msgid "She died in %(month_year)s in %(death_place)s at the age of %(age)s."
-msgstr "Sie starb im %(month_year)s in %(death_place)s, %(age)s alt."
+msgstr "Sie starb im %(month_year)s in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:417
 #, python-format
@@ -28349,7 +28349,7 @@ msgstr "%(unknown_gender_name)s starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:426
 #, python-format
 msgid "%(unknown_gender_name)s died in %(month_year)s at the age of %(age)s."
-msgstr "%(unknown_gender_name)s starb im %(month_year)s, %(age)s alt."
+msgstr "%(unknown_gender_name)s starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:429
 #, python-format
@@ -28359,7 +28359,7 @@ msgstr "%(male_name)s starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:430
 #, python-format
 msgid "%(male_name)s died in %(month_year)s at the age of %(age)s."
-msgstr "%(male_name)s starb im %(month_year)s, %(age)s alt."
+msgstr "%(male_name)s starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:433
 #, python-format
@@ -28369,7 +28369,7 @@ msgstr "%(female_name)s starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:434
 #, python-format
 msgid "%(female_name)s died in %(month_year)s at the age of %(age)s."
-msgstr "%(female_name)s starb im %(month_year)s, %(age)s alt."
+msgstr "%(female_name)s starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:439
 #, python-format
@@ -28379,7 +28379,7 @@ msgstr "Diese Person starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:440
 #, python-format
 msgid "This person died in %(month_year)s at the age of %(age)s."
-msgstr "Diese Person starb im %(month_year)s, %(age)s alt."
+msgstr "Diese Person starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:443
 #, python-format
@@ -28389,7 +28389,7 @@ msgstr "Er starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:444
 #, python-format
 msgid "He died in %(month_year)s at the age of %(age)s."
-msgstr "Er starb im %(month_year)s, %(age)s alt."
+msgstr "Er starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:447
 #, python-format
@@ -28399,7 +28399,7 @@ msgstr "Sie starb im %(month_year)s."
 #: ../gramps/plugins/lib/libnarrate.py:448
 #, python-format
 msgid "She died in %(month_year)s at the age of %(age)s."
-msgstr "Sie starb im %(month_year)s, %(age)s alt."
+msgstr "Sie starb im %(month_year)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:452
 #, python-format
@@ -28419,7 +28419,7 @@ msgstr "%(unknown_gender_name)s starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:461
 #, python-format
 msgid "%(unknown_gender_name)s died in %(death_place)s at the age of %(age)s."
-msgstr "%(unknown_gender_name)s starb in %(death_place)s, %(age)s alt."
+msgstr "%(unknown_gender_name)s starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:464
 #, python-format
@@ -28429,7 +28429,7 @@ msgstr "%(male_name)s starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:465
 #, python-format
 msgid "%(male_name)s died in %(death_place)s at the age of %(age)s."
-msgstr "%(male_name)s starb in %(death_place)s, %(age)s alt."
+msgstr "%(male_name)s starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:468
 #, python-format
@@ -28439,7 +28439,7 @@ msgstr "%(female_name)s starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:469
 #, python-format
 msgid "%(female_name)s died in %(death_place)s at the age of %(age)s."
-msgstr "%(female_name)s starb in %(death_place)s, %(age)s alt."
+msgstr "%(female_name)s starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:474
 #, python-format
@@ -28449,7 +28449,7 @@ msgstr "Diese Person starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:475
 #, python-format
 msgid "This person died in %(death_place)s at the age of %(age)s."
-msgstr "Diese Person starb in %(death_place)s, %(age)s alt."
+msgstr "Diese Person starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:478
 #, python-format
@@ -28459,7 +28459,7 @@ msgstr "Er starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:479
 #, python-format
 msgid "He died in %(death_place)s at the age of %(age)s."
-msgstr "Er starb in %(death_place)s, %(age)s alt."
+msgstr "Er starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:482
 #, python-format
@@ -28469,7 +28469,7 @@ msgstr "Sie starb in %(death_place)s."
 #: ../gramps/plugins/lib/libnarrate.py:483
 #, python-format
 msgid "She died in %(death_place)s at the age of %(age)s."
-msgstr "Sie starb in %(death_place)s, %(age)s alt."
+msgstr "Sie starb in %(death_place)s im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:487
 #, python-format
@@ -28484,32 +28484,32 @@ msgstr "Starb in %(death_place)s (%(age)s)."
 #: ../gramps/plugins/lib/libnarrate.py:496
 #, python-format
 msgid "%(unknown_gender_name)s died at the age of %(age)s."
-msgstr "%(unknown_gender_name)s starb %(age)s alt."
+msgstr "%(unknown_gender_name)s starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:500
 #, python-format
 msgid "%(male_name)s died at the age of %(age)s."
-msgstr "%(male_name)s starb %(age)s alt."
+msgstr "%(male_name)s starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:504
 #, python-format
 msgid "%(female_name)s died at the age of %(age)s."
-msgstr "%(female_name)s starb %(age)s alt."
+msgstr "%(female_name)s starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:510
 #, python-format
 msgid "This person died at the age of %(age)s."
-msgstr "Diese Person starb %(age)s alt."
+msgstr "Diese Person starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:514
 #, python-format
 msgid "He died at the age of %(age)s."
-msgstr "Er starb %(age)s alt."
+msgstr "Er starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:518
 #, python-format
 msgid "She died at the age of %(age)s."
-msgstr "Sie starb %(age)s alt."
+msgstr "Sie starb im Alter von %(age)s."
 
 #: ../gramps/plugins/lib/libnarrate.py:523
 #, python-format
